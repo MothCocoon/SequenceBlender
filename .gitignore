@@ -1,0 +1,11 @@
+/.vs
+/Binaries
+/Binaries/Win64
+/Build/WindowsNoEditor
+/Intermediate
+/Plugins/*/Binaries
+/Plugins/*/Binaries/Win64
+/Plugins/*/Intermediate
+/Saved
+/WindowsNoEditor
+*.sln
