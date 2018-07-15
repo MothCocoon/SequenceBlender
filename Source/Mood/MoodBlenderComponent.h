@@ -60,7 +60,7 @@ public:
 	FCollectionMood() {}
 };
 
-UCLASS(ClassGroup = (Mood), CollapseCategories, HideCategories = (Activation, Collision, Cooking, Tags))
+UCLASS(ClassGroup = (Mood), Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent), CollapseCategories, HideCategories = (Activation, Collision, Cooking, Tags))
 class UMoodBlenderComponent final : public UActorComponent
 {
 	GENERATED_BODY()
@@ -70,7 +70,9 @@ public:
 
 	virtual void OnRegister() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	void SetMood(const int32 NewTime, const bool bForce);
+
+	UFUNCTION(BlueprintCallable, Category = Mood)
+		void SetMood(const int32 NewTime, const bool bForce);
 
 private:
 	void GetAllCollections(UMovieScene* MovieScene);
@@ -108,8 +110,8 @@ public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 		ULevelSequence* MoodSequence;
 
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-		APostProcessVolume* PostProcess;
+	//UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
+	//	APostProcessVolume* PostProcess;
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 		AAtmosphericFog* AtmosphericFog;
