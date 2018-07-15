@@ -11,10 +11,10 @@ Solution? Let's use custom code for reading a new mood state from Sequencer and 
 Notes
 * Blending could work with any kind of actor/object. Currently component reads and blends: float, color/vector, transform.
 * My implementation is limited to few actors commonly used to create a mood. 
- * Atmospheric Fog
- * Exponential Fog
- * Directional Light
- * Sky Light
+  * Atmospheric Fog
+  * Exponential Fog
+  * Directional Light
+  * Sky Light
 * It's easy to support other actors. I didn't make code universal because I wouldn't find use for it.
 * You only need copy MoodBlenderComponent class to project. Oh, and the few includes from Build.cs.
 * I'm not a full-time programmers, just a technical designer. If you see how I could improve this code, let me know!
