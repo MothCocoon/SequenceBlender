@@ -1,0 +1,10 @@
+/.vs
+/Build/WindowsNoEditor
+/Config/DefaultEditorSettings.ini
+/Config/Localization
+/Intermediate
+/Plugins/*/Intermediate
+/Saved
+*.sln
+*.vcxproj
+*.vcxproj.filters
