@@ -1,6 +1,6 @@
 # Mood Blender Component
 
-I wrote Mood Blender component for easy blending between "mood states" of the world during game. Visual setting of day-night cycle is example of such "mood state".
+I wrote Mood Blender component for easy blending between "mood states" of the world during game. Setting of day-night cycle or weather state are examples of such "mood state".
 
 Sequencer is used as WYSIWYG editor for these states. Every world state is represented as a single frame. 
 
