@@ -6,7 +6,7 @@ Sequencer is used as WYSIWYG editor for these states. Every world state is repre
 The problem: in our game we often jump between non-consecutive frames, so we can't simply play the sequence. Player would see transitions through many states.
 Solution? Let's use custom code for reading a new mood state from Sequencer and nicely blend world objects to this new state.
 
-![Alt Text](https://imgur.com/a/xzsRHpb/giphy.gif)
+![Alt Text](https://imgur.com/a/xzsRHpb.gif)
 
 You're free to fork this code and use it in your project. You're not allowed to sell this code to other developers.
 
