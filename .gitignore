@@ -7,3 +7,14 @@
 /Saved
 /WindowsNoEditor
 *.sln
+Binaries/Win64/Mood-Win64-Shipping.exe
+Binaries/Win64/Mood-Win64-Shipping.exp
+Binaries/Win64/Mood-Win64-Shipping.lib
+Binaries/Win64/Mood-Win64-Shipping.pdb
+Binaries/Win64/Mood-Win64-Shipping.target
+Binaries/Win64/Mood.exe
+Binaries/Win64/Mood.exp
+Binaries/Win64/Mood.lib
+Binaries/Win64/Mood.pdb
+Binaries/Win64/Mood.target
+Binaries/Win64/MoodEditor.target
