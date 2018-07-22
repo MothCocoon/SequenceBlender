@@ -1,6 +1,7 @@
 # Mood Blender Component
 
 I wrote Mood Blender component for easy blending between "mood states" of the world during game. Visual setting of day-night cycle is example of such "mood state".
+
 Sequencer is used as WYSIWYG editor for these states. Every world state is represented as a single frame. 
 
 The problem: in our game we often jump between non-consecutive frames, so we can't simply play the sequence. Player would see transitions through many states.
