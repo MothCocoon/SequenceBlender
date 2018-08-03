@@ -17,7 +17,7 @@ Most of this project is used as simple demo. Simply move the code to your projec
 
 ## For programmers  
 * You only need to copy MoodBlenderComponent class and the few includes from Build.cs to your project.
-* I'm not a full-time programmers, just a technical designer. If you see how I could improve this code, let me know!
+* I'm not a full-time programmer, just a technical designer. If you see how I could improve this code, let me know!
 
 ## Notes
 Most of the code is universal and it's easy customize component for a specific game. Although it didn't make sense to make it 100% universal.
