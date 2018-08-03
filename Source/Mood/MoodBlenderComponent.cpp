@@ -9,6 +9,7 @@
 #include "MovieScene.h"
 #include "MovieScene3DTransformSection.h"
 #include "MovieScene3DTransformTrack.h"
+#include "MovieSceneChannelProxy.h"
 #include "MovieSceneColorSection.h"
 #include "MovieSceneColorTrack.h"
 #include "MovieSceneCommonHelpers.h"
@@ -64,6 +65,8 @@ void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 	if (MovieScene == nullptr) return;
 
 	CurrentFrame = NewTime;
+	CurrentFrameNumber = MovieScene->GetTickResolution().AsFrameNumber(CurrentFrame);
+	CurrentFrameTime = FFrameTime(CurrentFrameNumber, 0.0f);
 
 	Collections.Empty();
 	OldCollectionStates.Empty();
@@ -141,24 +144,26 @@ void UMoodBlenderComponent::CacheSequencerCollection(const UMovieSceneMaterialPa
 {
 	FCollectionMood& NewState = NewCollectionStates.FindOrAdd(Track->MPC);
 
-	const UMovieSceneParameterSection* Section = Cast<UMovieSceneParameterSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrame));
+	const UMovieSceneParameterSection* Section = Cast<UMovieSceneParameterSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrameNumber));
 	if (Section)
 	{
 		for (const FScalarParameterNameAndCurve ScalarCurve : Section->GetScalarParameterNamesAndCurves())
 		{
-			NewState.Scalars.Add(ScalarCurve.ParameterName, ScalarCurve.ParameterCurve.Eval(CurrentFrame));
+			float NewFloat;
+			ScalarCurve.ParameterCurve.Evaluate(CurrentFrameTime, NewFloat);
+
+			NewState.Scalars.Add(ScalarCurve.ParameterName, NewFloat);
 			NewState.IsValid = true;
 		}
 
 		for (const FColorParameterNameAndCurves ColorCurve : Section->GetColorParameterNamesAndCurves())
 		{
-			FLinearColor Color = FLinearColor
-			(
-				ColorCurve.RedCurve.Eval(CurrentFrame),
-				ColorCurve.GreenCurve.Eval(CurrentFrame),
-				ColorCurve.BlueCurve.Eval(CurrentFrame),
-				ColorCurve.AlphaCurve.Eval(CurrentFrame)
-			);
+			FLinearColor Color;
+			ColorCurve.RedCurve.Evaluate(CurrentFrameTime, Color.R);
+			ColorCurve.GreenCurve.Evaluate(CurrentFrameTime, Color.G);
+			ColorCurve.BlueCurve.Evaluate(CurrentFrameTime, Color.B);
+			ColorCurve.AlphaCurve.Evaluate(CurrentFrameTime, Color.A);
+
 			NewState.Colors.Add(ColorCurve.ParameterName, Color);
 			NewState.IsValid = true;
 		}
@@ -277,27 +282,25 @@ void UMoodBlenderComponent::CacheSequencerObject(const TArray<UMovieScenePropert
 	{
 		if (Track->GetClass() == UMovieScene3DTransformTrack::StaticClass())
 		{
-			const UMovieScene3DTransformSection* Section = Cast<UMovieScene3DTransformSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrame));
+			const UMovieScene3DTransformSection* Section = Cast<UMovieScene3DTransformSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrameNumber));
 			if (Section)
 			{
-				FRotator Rotation = FRotator
-				(
-					Section->GetRotationCurve(EAxis::Y).Eval(CurrentFrame),
-					Section->GetRotationCurve(EAxis::Z).Eval(CurrentFrame),
-					Section->GetRotationCurve(EAxis::X).Eval(CurrentFrame)
-				);
-				FVector Translation = FVector
-				(
-					Section->GetTranslationCurve(EAxis::X).Eval(CurrentFrame),
-					Section->GetTranslationCurve(EAxis::Y).Eval(CurrentFrame),
-					Section->GetTranslationCurve(EAxis::Z).Eval(CurrentFrame)
-				);
-				FVector Scale = FVector
-				(
-					Section->GetScaleCurve(EAxis::X).Eval(CurrentFrame),
-					Section->GetScaleCurve(EAxis::Y).Eval(CurrentFrame),
-					Section->GetScaleCurve(EAxis::Z).Eval(CurrentFrame)
-				);
+				TArrayView<FMovieSceneFloatChannel*> FloatChannels = Section->GetChannelProxy().GetChannels<FMovieSceneFloatChannel>();
+
+				FVector Translation;
+				FloatChannels[0]->Evaluate(CurrentFrameTime, Translation.X);
+				FloatChannels[1]->Evaluate(CurrentFrameTime, Translation.Y);
+				FloatChannels[2]->Evaluate(CurrentFrameTime, Translation.Z);
+
+				FRotator Rotation;
+				FloatChannels[3]->Evaluate(CurrentFrameTime, Rotation.Pitch);
+				FloatChannels[4]->Evaluate(CurrentFrameTime, Rotation.Yaw);
+				FloatChannels[5]->Evaluate(CurrentFrameTime, Rotation.Roll);
+
+				FVector Scale;
+				FloatChannels[6]->Evaluate(CurrentFrameTime, Scale.X);
+				FloatChannels[7]->Evaluate(CurrentFrameTime, Scale.Y);
+				FloatChannels[8]->Evaluate(CurrentFrameTime, Scale.Z);
 
 				NewState.Transform = FTransform(Rotation, Translation, Scale);
 				NewState.IsNewTransform = true;
@@ -307,26 +310,28 @@ void UMoodBlenderComponent::CacheSequencerObject(const TArray<UMovieScenePropert
 
 		if (Track->GetClass() == UMovieSceneFloatTrack::StaticClass())
 		{
-			const UMovieSceneFloatSection* Section = Cast<UMovieSceneFloatSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrame));
+			const UMovieSceneFloatSection* Section = Cast<UMovieSceneFloatSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrameNumber));
 			if (Section)
 			{
-				NewState.Floats.Add(Track->GetPropertyName(), Section->GetFloatCurve().Eval(CurrentFrame));
+				float NewFloat;
+				Section->GetChannel().Evaluate(CurrentFrameTime, NewFloat);
+
+				NewState.Floats.Add(Track->GetPropertyName(), NewFloat);
 				NewState.IsValid = true;
 			}
 		}
 
 		if (Track->GetClass() == UMovieSceneColorTrack::StaticClass())
 		{
-			const UMovieSceneColorSection* Section = Cast<UMovieSceneColorSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrame));
+			const UMovieSceneColorSection* Section = Cast<UMovieSceneColorSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrameNumber));
 			if (Section)
 			{
-				FLinearColor Color = FLinearColor
-				(
-					Section->GetRedCurve().Eval(CurrentFrame),
-					Section->GetGreenCurve().Eval(CurrentFrame),
-					Section->GetBlueCurve().Eval(CurrentFrame),
-					Section->GetAlphaCurve().Eval(CurrentFrame)
-				);
+				FLinearColor Color;
+				Section->GetRedChannel().Evaluate(CurrentFrameTime, Color.R);
+				Section->GetGreenChannel().Evaluate(CurrentFrameTime, Color.G);
+				Section->GetBlueChannel().Evaluate(CurrentFrameTime, Color.B);
+				Section->GetAlphaChannel().Evaluate(CurrentFrameTime, Color.A);
+
 				NewState.Colors.Add(Track->GetPropertyName(), Color);
 				NewState.IsValid = true;
 			}
