@@ -104,6 +104,12 @@ public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood)
 		int32 CurrentFrame;
 
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood)
+		FFrameTime CurrentFrameTime;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood)
+		FFrameNumber CurrentFrameNumber;
+
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0.0f))
 		float BlendTime = 1.0f;
 
