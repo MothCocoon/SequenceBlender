@@ -4,9 +4,9 @@ I wrote Mood Blender component for easy blending between "mood states" of the wo
 
 Sequencer is used as WYSIWYG editor for these states. Every world state is represented as a single frame. 
 
-The problem: in our game we often jump between non-consecutive frames, so we can't simply play the sequence. Player would see transitions through many states.
+Problem: what if we need to often jump between non-consecutive frames? We can't simply play the sequence. Player would see transitions through many states.
 
-Solution? Let's use custom code for reading a new mood state from Sequencer and nicely blend world objects to this new state.
+Solution? Let's use custom code for reading a new mood state from Sequencer and nicely blend world objects to the new state!
 
 ![Imgur](https://i.imgur.com/7wlymOY.gif)
 
