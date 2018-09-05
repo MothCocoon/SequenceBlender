@@ -10,6 +10,7 @@
 #include "LevelSequence.h"
 #include "MovieSceneMaterialParameterCollectionTrack.h"
 #include "MovieScenePropertyTrack.h"
+
 #include "MoodBlenderComponent.generated.h"
 
 /**
@@ -60,7 +61,7 @@ public:
 	FCollectionMood() {}
 };
 
-UCLASS(ClassGroup = (Mood), Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent), CollapseCategories, HideCategories = (Activation, Collision, Cooking, Tags))
+UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent), CollapseCategories, HideCategories = (Activation, Collision, Cooking, Tags))
 class UMoodBlenderComponent final : public UActorComponent
 {
 	GENERATED_BODY()
@@ -70,6 +71,11 @@ public:
 
 	virtual void OnRegister() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	void Init();
+
+	UFUNCTION(BlueprintCallable, Category = Mood)
+		void RecaptureSky();
 
 	UFUNCTION(BlueprintCallable, Category = Mood)
 		void SetMood(const int32 NewTime, const bool bForce);
@@ -90,11 +96,6 @@ private:
 	void UpdateObjects(UObject* Object, FObjectMood& NewState);
 
 public:
-	UFUNCTION(BlueprintCallable, Category = Mood)
-		void RecaptureSky();
-
-	void OnGameInitialized();
-
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0))
 		int32 ForceTime;
 
@@ -115,6 +116,9 @@ public:
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 		ULevelSequence* MoodSequence;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
+		UMovieScene* MoodMovie;
 
 	//UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 	//	APostProcessVolume* PostProcess;
