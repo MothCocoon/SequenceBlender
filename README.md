@@ -28,4 +28,4 @@ Most of the code is universal and it's easy customize component for a specific g
   * Directional Light
   * Sky Light
 * It's easy to support other actors.
-* Blending supports Material Param Collection.
+* Blending supports Material Parameter Collection.
