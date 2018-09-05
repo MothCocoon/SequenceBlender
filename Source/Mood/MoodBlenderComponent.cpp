@@ -1,4 +1,5 @@
 #include "MoodBlenderComponent.h"
+
 #include "Atmosphere/AtmosphericFogComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
@@ -34,6 +35,9 @@ void UMoodBlenderComponent::OnRegister()
 {
 	Super::OnRegister();
 
+	if (MoodSequence == nullptr) return;
+	MoodMovie = MoodSequence->GetMovieScene();
+
 	if (bResetTime)
 	{
 		SetMood(0, true);
@@ -56,27 +60,44 @@ void UMoodBlenderComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 	}
 }
 
+void UMoodBlenderComponent::Init()
+{
+	if (FirstRecaptureDelay > 0.0f)
+	{
+		FTimerHandle FirstRecaptureTimer;
+		GetOwner()->GetWorldTimerManager().SetTimer(FirstRecaptureTimer, this, &UMoodBlenderComponent::RecaptureSky, FirstRecaptureDelay, false, 0.0f);
+	}
+}
+
+void UMoodBlenderComponent::RecaptureSky()
+{
+	if (SkyLight != nullptr)
+	{
+		SkyLight->GetLightComponent()->RecaptureSky();
+	}
+}
+
 void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 {
-	if (MoodSequence == nullptr || bBlending) return;
+	if (bBlending || MoodSequence == nullptr) return;
 	if (CurrentFrame == NewTime && !bForce) return;
 
-	UMovieScene* MovieScene = MoodSequence->GetMovieScene();
-	if (MovieScene == nullptr) return;
+	const FFrameNumber NewFrameNumber = MoodMovie->GetTickResolution().AsFrameNumber(NewTime);
+	if (!MoodMovie->GetPlaybackRange().Contains(NewFrameNumber)) return;
 
 	CurrentFrame = NewTime;
-	CurrentFrameNumber = MovieScene->GetTickResolution().AsFrameNumber(CurrentFrame);
-	CurrentFrameTime = FFrameTime(CurrentFrameNumber, 0.0f);
+	CurrentFrameNumber = NewFrameNumber;
+	CurrentFrameTime = FFrameTime(NewFrameNumber, 0.0f);
 
 	Collections.Empty();
 	OldCollectionStates.Empty();
 	NewCollectionStates.Empty();
-	GetAllCollections(MovieScene);
+	GetAllCollections(MoodMovie);
 
 	Objects.Empty();
 	OldObjectStates.Empty();
 	NewObjectStates.Empty();
-	GetAllObjects(MovieScene);
+	GetAllObjects(MoodMovie);
 
 	if (NewObjectStates.Num() > 0 || NewCollectionStates.Num() > 0)
 	{
@@ -526,24 +547,5 @@ void UMoodBlenderComponent::UpdateObjects(UObject* Object, FObjectMood& NewState
 				}
 			}
 		}
-	}
-}
-
-void UMoodBlenderComponent::RecaptureSky()
-{
-	if (SkyLight != nullptr)
-	{
-		SkyLight->GetLightComponent()->RecaptureSky();
-	}
-}
-
-void UMoodBlenderComponent::OnGameInitialized()
-{
-	SetMood(0, true);
-
-	if (FirstRecaptureDelay > 0.0f)
-	{
-		FTimerHandle FirstRecaptureTimer;
-		GetOwner()->GetWorldTimerManager().SetTimer(FirstRecaptureTimer, this, &UMoodBlenderComponent::RecaptureSky, FirstRecaptureDelay, false, 0.0f);
 	}
 }
