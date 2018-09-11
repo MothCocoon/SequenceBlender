@@ -54,9 +54,12 @@ void UMoodBlenderComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (bBlending)
+	if (GetWorld()->WorldType == EWorldType::Game || GetWorld()->WorldType == EWorldType::PIE)
 	{
-		UpdateBlend();
+		if (bBlending)
+		{
+			UpdateBlend();
+		}
 	}
 }
 
