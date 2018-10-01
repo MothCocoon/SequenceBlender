@@ -50,7 +50,7 @@ struct FCollectionMood
 
 public:
 	UPROPERTY()
-		bool IsValid;
+		bool bValid;
 
 	UPROPERTY()
 		TMap<FName, float> Scalars;
@@ -92,8 +92,8 @@ private:
 	void CacheCurrentObject(UObject * Object);
 
 	void UpdateBlend();
-	void UpdateCollections(UMaterialParameterCollection * Collection, FCollectionMood& NewState);
-	void UpdateObjects(UObject* Object, FObjectMood& NewState);
+	void UpdateCollection(UMaterialParameterCollection * Collection, FCollectionMood& NewState);
+	void UpdateObject(UObject* Object, FObjectMood& NewState);
 
 public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0))
