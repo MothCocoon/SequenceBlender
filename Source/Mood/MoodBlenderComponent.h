@@ -23,10 +23,10 @@ struct FObjectMood
 
 public:
 	UPROPERTY()
-		bool IsValid;
+		bool bValid;
 
 	UPROPERTY()
-		bool IsNewTransform;
+		bool bNewTransform;
 
 	UPROPERTY()
 		FTransform Transform;
