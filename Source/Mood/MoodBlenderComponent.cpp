@@ -1,13 +1,13 @@
 #include "MoodBlenderComponent.h"
 
-#include "Atmosphere/AtmosphericFogComponent.h"
-#include "Components/DirectionalLightComponent.h"
-#include "Components/ExponentialHeightFogComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "MovieScene.h"
+#include "LevelSequence.h"
+#include "LevelSequenceActor.h"
+#include "LevelSequencePlayer.h"
+#include "Materials/MaterialParameterCollectionInstance.h"
 #include "MovieScene3DTransformSection.h"
 #include "MovieScene3DTransformTrack.h"
 #include "MovieSceneChannelProxy.h"
@@ -16,19 +16,17 @@
 #include "MovieSceneCommonHelpers.h"
 #include "MovieSceneFloatSection.h"
 #include "MovieSceneFloatTrack.h"
-#include "MovieSceneSubTrack.h"
-#include "Materials/Material.h"
-#include "Materials/MaterialInstanceDynamic.h"
-#include "Materials/MaterialParameterCollectionInstance.h"
-#include "MovieSceneMaterialTrack.h"
+#include "MovieSceneMaterialParameterCollectionTrack.h"
 #include "MovieSceneParameterSection.h"
-#include "MovieScenePossessable.h"
-#include "Sections/MovieSceneSubSection.h"
+#include "MovieScenePropertyTrack.h"
 #include "TimerManager.h"
 
-UMoodBlenderComponent::UMoodBlenderComponent()
+UMoodBlenderComponent::UMoodBlenderComponent(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.SetTickFunctionEnable(false);
 }
 
 void UMoodBlenderComponent::OnRegister()
@@ -36,7 +34,9 @@ void UMoodBlenderComponent::OnRegister()
 	Super::OnRegister();
 
 	if (MoodSequence == nullptr) return;
+
 	MoodMovie = MoodSequence->GetMovieScene();
+	CacheTracks();
 
 	if (bResetTime)
 	{
@@ -50,17 +50,71 @@ void UMoodBlenderComponent::OnRegister()
 	}
 }
 
-void UMoodBlenderComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UMoodBlenderComponent::CacheTracks()
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	CollectionTracks.Empty();
+	ObjectTracks.Empty();
 
-	if (GetWorld()->WorldType == EWorldType::Game || GetWorld()->WorldType == EWorldType::PIE)
+	// get material collection tracks
+	for (UMovieSceneTrack* Track : MoodMovie->GetMasterTracks())
 	{
-		if (bBlending)
+		UMovieSceneMaterialParameterCollectionTrack* CollectionTrack = Cast<UMovieSceneMaterialParameterCollectionTrack>(Track);
+		if (CollectionTrack)
 		{
-			UpdateBlend();
+			CollectionTracks.AddUnique(CollectionTrack);
 		}
 	}
+
+	// sequence player is needed to obtain object references
+	ALevelSequenceActor* SequenceActor;
+	ULevelSequencePlayer* SequencePlayer = ULevelSequencePlayer::CreateLevelSequencePlayer(this, MoodSequence, FMovieSceneSequencePlaybackSettings(), SequenceActor);
+	if (SequencePlayer == nullptr) return;
+
+	// get object pointers
+	for (int i = 0; i < MoodMovie->GetPossessableCount(); i++)
+	{
+		const FGuid& ObjectGuid = MoodMovie->GetPossessable(i).GetGuid();
+		check(ObjectGuid.IsValid());
+
+		const TArrayView<TWeakObjectPtr<>> FoundObjects = SequencePlayer->FindBoundObjects(ObjectGuid, MovieSceneSequenceID::Root);
+		for (const TWeakObjectPtr<> WeakObj : FoundObjects)
+		{
+			if (UObject* Object = WeakObj.Get())
+			{
+				for (const FMovieSceneBinding& Binding : MoodMovie->GetBindings())
+				{
+					if (Binding.GetObjectGuid() != ObjectGuid) continue;
+
+					TArray<UMovieScenePropertyTrack*> PropertyTracks;
+					for (UMovieSceneTrack* Track : Binding.GetTracks())
+					{
+						UMovieScenePropertyTrack* PropertyTrack = Cast<UMovieScenePropertyTrack>(Track);
+						if (PropertyTrack)
+						{
+							PropertyTracks.Add(PropertyTrack);
+						}
+					}
+
+					ObjectTracks.Add(Object, FCachedPropertyTrack(Cast<AActor>(Object), Cast<USceneComponent>(Object), PropertyTracks));
+				}
+
+				break;
+			}
+		}
+	}
+}
+
+USceneComponent* UMoodBlenderComponent::GetMoodComponent(const TSubclassOf<USceneComponent> Class)
+{
+	for (const TPair<UObject*, FCachedPropertyTrack>& Object : ObjectTracks)
+	{
+		if (Object.Key->IsA(Class))
+		{
+			return Cast<USceneComponent>(Object.Key);
+		}
+	}
+
+	return nullptr;
 }
 
 void UMoodBlenderComponent::Init()
@@ -74,9 +128,9 @@ void UMoodBlenderComponent::Init()
 
 void UMoodBlenderComponent::RecaptureSky()
 {
-	if (SkyLight != nullptr)
+	if (SkyLightComponent)
 	{
-		SkyLight->GetLightComponent()->RecaptureSky();
+		SkyLightComponent->RecaptureSky();
 	}
 }
 
@@ -92,16 +146,25 @@ void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 	CurrentFrameNumber = NewFrameNumber;
 	CurrentFrameTime = FFrameTime(NewFrameNumber, 0.0f);
 
-	Collections.Empty();
+	// cache all collections
 	OldCollectionStates.Empty();
 	NewCollectionStates.Empty();
-	GetAllCollections(MoodMovie);
+	for (const UMovieSceneMaterialParameterCollectionTrack* Track : CollectionTracks)
+	{
+		CacheSequencerCollection(Track);
+		CacheCurrentCollection(Track->MPC);
+	}
 
-	Objects.Empty();
+	// cache all objects
 	OldObjectStates.Empty();
 	NewObjectStates.Empty();
-	GetAllObjects(MoodMovie);
+	for (const TPair<UObject*, FCachedPropertyTrack>& Object : ObjectTracks)
+	{
+		CacheSequencerObject(Object.Key, Object.Value.Tracks);
+		CacheCurrentObject(Object.Key);
+	}
 
+	// call update
 	if (NewObjectStates.Num() > 0 || NewCollectionStates.Num() > 0)
 	{
 		CurrentBlendTime = 0.0f;
@@ -115,53 +178,12 @@ void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 		{
 			BlendAlpha = 0.0f;
 			bBlending = true;
-		}
-	}
-}
-
-void UMoodBlenderComponent::GetAllCollections(UMovieScene* MovieScene)
-{
-	for (UMovieSceneTrack* Track : MovieScene->GetMasterTracks())
-	{
-		if (Track->IsA(UMovieSceneMaterialParameterCollectionTrack::StaticClass()))
-		{
-			CacheCollection((UMovieSceneMaterialParameterCollectionTrack*)Track);
-		}
-
-		if (Track->IsA(UMovieSceneSubTrack::StaticClass()))
-		{
-			UMovieSceneSubTrack* SubTrack = CastChecked<UMovieSceneSubTrack>(Track);
-
-			const TArray<UMovieSceneSection*>& Sections = SubTrack->GetAllSections();
-			for (const auto& Section : Sections)
+			if (GetWorld()->WorldType == EWorldType::Game || GetWorld()->WorldType == EWorldType::PIE)
 			{
-				const auto SubSection = CastChecked<UMovieSceneSubSection>(Section);
-
-				// is the section referencing the sequence?
-				const UMovieSceneSequence* SubSequence = SubSection->GetSequence();
-				if (SubSequence == nullptr)
-				{
-					continue;
-				}
-
-				// does the section have sub-tracks referencing the sequence?
-				UMovieScene* SubMovieScene = SubSequence->GetMovieScene();
-				if (SubMovieScene != nullptr)
-				{
-					GetAllCollections(SubMovieScene);
-				}
+				PrimaryComponentTick.SetTickFunctionEnable(true);
 			}
 		}
 	}
-}
-
-void UMoodBlenderComponent::CacheCollection(const UMovieSceneMaterialParameterCollectionTrack* Track)
-{
-	if (Track->MPC == nullptr) return;
-
-	Collections.AddUnique(Track->MPC);
-	CacheSequencerCollection(Track);
-	CacheCurrentCollection(Track->MPC);
 }
 
 void UMoodBlenderComponent::CacheSequencerCollection(const UMovieSceneMaterialParameterCollectionTrack* Track)
@@ -212,92 +234,7 @@ void UMoodBlenderComponent::CacheCurrentCollection(UMaterialParameterCollection*
 	}
 }
 
-void UMoodBlenderComponent::GetAllObjects(UMovieScene* MovieScene)
-{
-	for (int i = 0; i < MovieScene->GetPossessableCount(); i++)
-	{
-		const FGuid& ObjectGuid = MovieScene->GetPossessable(i).GetGuid();
-		check(ObjectGuid.IsValid());
-
-		const FMovieScenePossessable* Possessable = MovieScene->FindPossessable(ObjectGuid);
-		const UClass* PossessedClass = Possessable->GetPossessedObjectClass();
-		TArray<UMovieScenePropertyTrack*> PropertyTracks;
-
-		for (const FMovieSceneBinding& Binding : MovieScene->GetBindings())
-		{
-			if (Binding.GetObjectGuid() != ObjectGuid)
-			{
-				continue;
-			}
-
-			for (const UMovieSceneTrack* Track : Binding.GetTracks())
-			{
-				if (Track->IsA(UMovieScenePropertyTrack::StaticClass()))
-				{
-					PropertyTracks.Add((UMovieScenePropertyTrack*)Track);
-				}
-			}
-		}
-
-		if (PropertyTracks.Num() > 0)
-		{
-			if (PossessedClass == UAtmosphericFogComponent::StaticClass())
-			{
-				if (AtmosphericFog != nullptr)
-				{
-					CacheObjects(PropertyTracks, AtmosphericFog->GetAtmosphericFogComponent());
-				}
-			}
-			else if (PossessedClass == UExponentialHeightFogComponent::StaticClass())
-			{
-				if (ExponentialFog != nullptr)
-				{
-					CacheObjects(PropertyTracks, ExponentialFog->GetComponent());
-				}
-			}
-			else if (PossessedClass == ADirectionalLight::StaticClass())
-			{
-				if (DirectionalLight != nullptr)
-				{
-					CacheObjects(PropertyTracks, DirectionalLight);
-				}
-			}
-			else if (PossessedClass == UDirectionalLightComponent::StaticClass())
-			{
-				if (DirectionalLight != nullptr)
-				{
-					CacheObjects(PropertyTracks, DirectionalLight->GetLightComponent());
-				}
-			}
-			else if (PossessedClass == ASkyLight::StaticClass())
-			{
-				if (SkyLight != nullptr)
-				{
-					CacheObjects(PropertyTracks, SkyLight);
-				}
-			}
-			else if (PossessedClass == USkyLightComponent::StaticClass())
-			{
-				if (SkyLight != nullptr)
-				{
-					CacheObjects(PropertyTracks, SkyLight->GetLightComponent());
-				}
-			}
-		}
-	}
-}
-
-void UMoodBlenderComponent::CacheObjects(const TArray<UMovieScenePropertyTrack*> Tracks, UObject* Object)
-{
-	if (Object == nullptr) return;
-
-	Objects.AddUnique(Object);
-	CacheSequencerObject(Tracks, Object);
-	CacheCurrentObject(Object);
-
-}
-
-void UMoodBlenderComponent::CacheSequencerObject(const TArray<UMovieScenePropertyTrack*> Tracks, UObject* Object)
+void UMoodBlenderComponent::CacheSequencerObject(UObject* Object, const TArray<UMovieScenePropertyTrack*> Tracks)
 {
 	FObjectMood& NewState = NewObjectStates.FindOrAdd(Object);
 	NewState.bNewTransform = false;
@@ -419,6 +356,12 @@ void UMoodBlenderComponent::CacheCurrentObject(UObject* Object)
 	OldObjectStates.Add(Object, OldState);
 }
 
+void UMoodBlenderComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	UpdateBlend();
+}
+
 void UMoodBlenderComponent::UpdateBlend()
 {
 	// update blend alpha
@@ -445,32 +388,30 @@ void UMoodBlenderComponent::UpdateBlend()
 	}
 
 	// apply changes
-	for (UMaterialParameterCollection* Collection : Collections)
+	for (const UMovieSceneMaterialParameterCollectionTrack* Track : CollectionTracks)
 	{
-		GetWorld()->GetParameterCollectionInstance(Collection)->UpdateRenderState();
+		GetWorld()->GetParameterCollectionInstance(Track->MPC)->UpdateRenderState();
 	}
-	for (UObject* Object : Objects)
+	for (const TPair<UObject*, FCachedPropertyTrack>& Object : ObjectTracks)
 	{
-		if (Object->GetClass()->IsChildOf(AActor::StaticClass()))
+		if (Object.Value.Component)
 		{
-			(Cast<AActor>(Object))->MarkComponentsRenderStateDirty();
+			Object.Value.Component->MarkRenderStateDirty();
 		}
-		else
+		else if (Object.Value.Actor)
 		{
-			Cast<USceneComponent>(Object)->MarkRenderStateDirty();
+			Object.Value.Actor->MarkComponentsRenderStateDirty();
 		}
 	}
 
-	if (SkyLight != nullptr)
+	if ((BlendAlpha < 1.0f && bRecaptureSkyEveryFrame) || BlendAlpha == 1.0f)
 	{
-		if ((BlendAlpha < 1.0f && bRecaptureSkyEveryFrame) || BlendAlpha == 1.0f)
-		{
-			RecaptureSky();
-		}
+		RecaptureSky();
 	}
 
 	if (BlendAlpha == 1.0f)
 	{
+		PrimaryComponentTick.SetTickFunctionEnable(false);
 		bBlending = false;
 	}
 }
