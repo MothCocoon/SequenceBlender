@@ -1,16 +1,16 @@
 # Mood Blender Component
 
-I wrote Mood Blender component for easy blending between "mood states" of the world during game. Setting of day-night cycle or weather state are examples of such "mood state".
+Mood Blender component is used for easy blending between "mood states" of the world during game. Setting of day-night cycle or weather state are examples of such "mood state".
 
 Sequencer is used as WYSIWYG editor for these states. Every world state is represented as a single frame. 
 
-Problem: what if we need to often jump between non-consecutive frames? We can't simply play the sequence. Player would see transitions through many states.
+Problem to solve: what if we need to often jump between non-consecutive frames? We can't simply play the sequence. Player would see transitions through many states.
 
 Solution? Let's use custom code for reading a new mood state from Sequencer and nicely blend world objects to the new state!
 
 ![Imgur](https://i.imgur.com/7wlymOY.gif)
 
-You're free to fork this code and use it in your project. You're not allowed to sell this code to other developers.
+You're free to fork this code and use it in your project. You're not allowed to sell this code.
 
 ## Demo project
 Most of this project is used as simple demo. Simply move the code to your project, you don't need any assets or blueprints.
@@ -21,11 +21,5 @@ Most of this project is used as simple demo. Simply move the code to your projec
 
 ## Notes
 Most of the code is universal and it's easy customize component for a specific game. Although it didn't make sense to make it 100% universal.
-* Currently component reads and blends: float, color/vector, transform. 
-* My implementation is limited to few actors commonly used for creating mood - for the convencience only.
-  * Atmospheric Fog
-  * Exponential Fog
-  * Directional Light
-  * Sky Light
-* It's easy to support other actors.
-* Blending supports Material Parameter Collection.
+* Blending supports these object properties: float, color/vector, transform. 
+* Component also blends Material Parameter Collections.
