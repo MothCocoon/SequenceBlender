@@ -1,17 +1,41 @@
 #pragma once
 
-#include "Atmosphere/AtmosphericFog.h"
 #include "CoreMinimal.h"
-#include "Engine/DirectionalLight.h"
-#include "Engine/Engine.h"
-#include "Engine/ExponentialHeightFog.h"
-#include "Engine/PostProcessVolume.h"
-#include "Engine/SkyLight.h"
-#include "LevelSequence.h"
-#include "MovieSceneMaterialParameterCollectionTrack.h"
-#include "MovieScenePropertyTrack.h"
-
 #include "MoodBlenderComponent.generated.h"
+
+class ASkyLight;
+class ULevelSequence;
+class UMovieScene;
+class UMovieSceneMaterialParameterCollectionTrack;
+class UMovieScenePropertyTrack;
+
+/**
+* Cached list of objects and tracks
+*/
+USTRUCT()
+struct FCachedPropertyTrack
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+		AActor* Actor;
+
+	UPROPERTY()
+		USceneComponent* Component;
+
+	UPROPERTY()
+		TArray<UMovieScenePropertyTrack*> Tracks;
+
+	FCachedPropertyTrack() {}
+
+	FCachedPropertyTrack(AActor* InActor, USceneComponent* InComponent, const TArray<UMovieScenePropertyTrack*> InTracks)
+	{
+		Actor = InActor;
+		Component = InComponent;
+		Tracks = InTracks;
+	}
+};
 
 /**
 * Container for mood state of object
@@ -64,13 +88,14 @@ public:
 UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent), CollapseCategories, HideCategories = (Activation, Collision, Cooking, Tags))
 class UMoodBlenderComponent final : public UActorComponent
 {
-	GENERATED_BODY()
+	GENERATED_UCLASS_BODY()
 
 public:
-	UMoodBlenderComponent();
-
 	virtual void OnRegister() override;
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	void CacheTracks();
+	
+	UFUNCTION(BlueprintPure, Category = Mood)
+		USceneComponent* GetMoodComponent(const TSubclassOf<USceneComponent> Class);
 
 	void Init();
 
@@ -81,16 +106,16 @@ public:
 		void SetMood(const int32 NewTime, const bool bForce);
 
 private:
-	void GetAllCollections(UMovieScene* MovieScene);
-	void CacheCollection(const UMovieSceneMaterialParameterCollectionTrack * Track);
 	void CacheSequencerCollection(const UMovieSceneMaterialParameterCollectionTrack* Track);
 	void CacheCurrentCollection(UMaterialParameterCollection* Collection);
 
-	void GetAllObjects(UMovieScene* MovieScene);
-	void CacheObjects(const TArray<UMovieScenePropertyTrack*> Tracks, UObject* Object);
-	void CacheSequencerObject(const TArray<UMovieScenePropertyTrack*> Tracks, UObject* Object);
+	void CacheSequencerObject(UObject* Object, const TArray<UMovieScenePropertyTrack*> Tracks);
 	void CacheCurrentObject(UObject * Object);
 
+public:
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+private:
 	void UpdateBlend();
 	void UpdateCollection(UMaterialParameterCollection * Collection, FCollectionMood& NewState);
 	void UpdateObject(UObject* Object, FObjectMood& NewState);
@@ -117,31 +142,24 @@ public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 		ULevelSequence* MoodSequence;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
-		UMovieScene* MoodMovie;
-
-	//UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-	//	APostProcessVolume* PostProcess;
-
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-		AAtmosphericFog* AtmosphericFog;
-
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-		AExponentialHeightFog* ExponentialFog;
-
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-		ADirectionalLight* DirectionalLight;
-
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-		ASkyLight* SkyLight;
-
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 		bool bRecaptureSkyEveryFrame = true;
 
 	// if value > 0.0f, use it to trigger recapture after initializing the game
-	// OnGameInitialized() must be called from custom game logic
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 		float FirstRecaptureDelay = 0.0f;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
+		UMovieScene* MoodMovie;
+
+	UPROPERTY(Transient)
+		TArray<UMovieSceneMaterialParameterCollectionTrack*> CollectionTracks;
+
+	UPROPERTY(Transient)
+		TMap<UObject*, FCachedPropertyTrack> ObjectTracks;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
+		USkyLightComponent* SkyLightComponent;
 
 public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
@@ -154,12 +172,10 @@ public:
 		float BlendAlpha;
 
 private:
-	TArray<UObject*> Objects;
 	TMap<UObject*, FObjectMood> OriginalObjectStates;
 	TMap<UObject*, FObjectMood> OldObjectStates;
 	TMap<UObject*, FObjectMood> NewObjectStates;
 
-	TArray<UMaterialParameterCollection*> Collections;
 	TMap<UMaterialParameterCollection*, FCollectionMood> OriginalCollectionStates;
 	TMap<UMaterialParameterCollection*, FCollectionMood> OldCollectionStates;
 	TMap<UMaterialParameterCollection*, FCollectionMood> NewCollectionStates;
