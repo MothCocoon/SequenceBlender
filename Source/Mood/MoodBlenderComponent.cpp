@@ -102,6 +102,12 @@ void UMoodBlenderComponent::CacheTracks()
 			}
 		}
 	}
+
+	USceneComponent* Component = GetMoodComponent(USkyLightComponent::StaticClass());
+	if (Component)
+	{
+		SkyLightComponent = Cast<USkyLightComponent>(Component);
+	}
 }
 
 USceneComponent* UMoodBlenderComponent::GetMoodComponent(const TSubclassOf<USceneComponent> Class)
