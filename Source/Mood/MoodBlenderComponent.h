@@ -3,11 +3,11 @@
 #include "CoreMinimal.h"
 #include "MoodBlenderComponent.generated.h"
 
-class ASkyLight;
 class ULevelSequence;
 class UMovieScene;
 class UMovieSceneMaterialParameterCollectionTrack;
 class UMovieScenePropertyTrack;
+class USkyLightComponent;
 
 /**
 * Cached list of objects and tracks
@@ -149,7 +149,7 @@ public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 		float FirstRecaptureDelay = 0.0f;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
+	UPROPERTY(BlueprintReadOnly, Category = Mood, Transient)
 		UMovieScene* MoodMovie;
 
 	UPROPERTY(Transient)
