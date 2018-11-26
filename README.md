@@ -14,8 +14,8 @@ You're free to fork this code and use it in your project. You're not allowed to 
 
 ## Getting started
 * Content project serves as a simple demo. You don't need to copy any assets from the demo.
-* What you need is to copy MoodBlenderComponent class and the few includes from Build.cs to your C++ project.
-* If you see how I could improve this code, let me know!
+* What you need is to copy Mood Blender Component class and the few includes from Build.cs to your C++ project.
+* Let me know, if you see how I could improve this code!
 
 ## Notes
 Most of the code is universal and it's easy customize component for a specific game. Although it didn't make sense to make it 100% universal.
