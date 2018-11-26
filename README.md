@@ -6,18 +6,16 @@ Sequencer is used as WYSIWYG editor for these states. Every world state is repre
 
 Problem to solve: what if we need to often jump between non-consecutive frames? We can't simply play the sequence. Player would see transitions through many states.
 
-Solution? Let's use custom code for reading a new mood state from Sequencer and nicely blend world objects to the new state!
+Solution? Let's use custom code for reading a new state from Sequencer and nicely blend world objects to this state!
 
 ![Imgur](https://i.imgur.com/7wlymOY.gif)
 
 You're free to fork this code and use it in your project. You're not allowed to sell this code.
 
-## Demo project
-Most of this project is used as simple demo. Simply move the code to your project, you don't need any assets or blueprints.
-
-## For programmers  
-* You only need to copy MoodBlenderComponent class and the few includes from Build.cs to your project.
-* I'm not a full-time programmer, just a technical designer. If you see how I could improve this code, let me know!
+## Getting started
+* Content project serves as a simple demo. You don't need to copy any assets from the demo.
+* What you need is to copy MoodBlenderComponent class and the few includes from Build.cs to your C++ project.
+* If you see how I could improve this code, let me know!
 
 ## Notes
 Most of the code is universal and it's easy customize component for a specific game. Although it didn't make sense to make it 100% universal.
