@@ -27,7 +27,11 @@ public:
 	UPROPERTY()
 		TArray<UMovieScenePropertyTrack*> Tracks;
 
-	FCachedPropertyTrack() {}
+	FCachedPropertyTrack() 
+	{
+		Actor = nullptr;
+		Component = nullptr;
+	}
 
 	FCachedPropertyTrack(AActor* InActor, USceneComponent* InComponent, const TArray<UMovieScenePropertyTrack*> InTracks)
 	{
@@ -61,7 +65,11 @@ public:
 	UPROPERTY()
 		TMap<FName, FLinearColor> Colors;
 
-	FObjectMood() {}
+	FObjectMood() 
+	{
+		bValid = false;
+		bNewTransform = false;
+	}
 };
 
 /**
@@ -82,7 +90,10 @@ public:
 	UPROPERTY()
 		TMap<FName, FLinearColor> Colors;
 
-	FCollectionMood() {}
+	FCollectionMood() 
+	{
+		bValid = false;
+	}
 };
 
 UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent), CollapseCategories, HideCategories = (Activation, Collision, Cooking, Tags))
