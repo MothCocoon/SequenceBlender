@@ -19,13 +19,13 @@ struct FCachedPropertyTrack
 
 public:
 	UPROPERTY()
-		AActor* Actor;
+	AActor* Actor;
 
 	UPROPERTY()
-		USceneComponent* Component;
+	USceneComponent* Component;
 
 	UPROPERTY()
-		TArray<UMovieScenePropertyTrack*> Tracks;
+	TArray<UMovieScenePropertyTrack*> Tracks;
 
 	FCachedPropertyTrack() 
 	{
@@ -51,19 +51,19 @@ struct FObjectMood
 
 public:
 	UPROPERTY()
-		bool bValid;
+	bool bValid;
 
 	UPROPERTY()
-		bool bNewTransform;
+	bool bNewTransform;
 
 	UPROPERTY()
-		FTransform Transform;
+	FTransform Transform;
 
 	UPROPERTY()
-		TMap<FName, float> Floats;
+	TMap<FName, float> Floats;
 
 	UPROPERTY()
-		TMap<FName, FLinearColor> Colors;
+	TMap<FName, FLinearColor> Colors;
 
 	FObjectMood() 
 	{
@@ -82,13 +82,13 @@ struct FCollectionMood
 
 public:
 	UPROPERTY()
-		bool bValid;
+	bool bValid;
 
 	UPROPERTY()
-		TMap<FName, float> Scalars;
+	TMap<FName, float> Scalars;
 
 	UPROPERTY()
-		TMap<FName, FLinearColor> Colors;
+	TMap<FName, FLinearColor> Colors;
 
 	FCollectionMood() 
 	{
@@ -106,15 +106,15 @@ public:
 	void CacheTracks();
 	
 	UFUNCTION(BlueprintPure, Category = Mood)
-		USceneComponent* GetMoodComponent(const TSubclassOf<USceneComponent> Class);
+	USceneComponent* GetMoodComponent(const TSubclassOf<USceneComponent> Class);
 
 	void Init();
 
 	UFUNCTION(BlueprintCallable, Category = Mood)
-		void RecaptureSky();
+	void RecaptureSky();
 
 	UFUNCTION(BlueprintCallable, Category = Mood)
-		void SetMood(const int32 NewTime, const bool bForce);
+	void SetMood(const int32 NewTime, const bool bForce);
 
 private:
 	void CacheSequencerCollection(const UMovieSceneMaterialParameterCollectionTrack* Track);
@@ -133,54 +133,54 @@ private:
 
 public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0))
-		int32 ForceTime;
+	int32 ForceTime;
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-		bool bResetTime;
+	bool bResetTime;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood)
-		int32 CurrentFrame;
+	int32 CurrentFrame;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood)
-		FFrameTime CurrentFrameTime;
+	FFrameTime CurrentFrameTime;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood)
-		FFrameNumber CurrentFrameNumber;
+	FFrameNumber CurrentFrameNumber;
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0.0f))
-		float BlendTime = 1.0f;
+	float BlendTime = 1.0f;
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-		ULevelSequence* MoodSequence;
+	ULevelSequence* MoodSequence;
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-		bool bRecaptureSkyEveryFrame = true;
+	bool bRecaptureSkyEveryFrame = true;
 
 	// if value > 0.0f, use it to trigger recapture after initializing the game
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-		float FirstRecaptureDelay = 0.0f;
+	float FirstRecaptureDelay = 0.0f;
 
 	UPROPERTY(BlueprintReadOnly, Category = Mood, Transient)
-		UMovieScene* MoodMovie;
+	UMovieScene* MoodMovie;
 
 	UPROPERTY(Transient)
-		TArray<UMovieSceneMaterialParameterCollectionTrack*> CollectionTracks;
+	TArray<UMovieSceneMaterialParameterCollectionTrack*> CollectionTracks;
 
 	UPROPERTY(Transient)
-		TMap<UObject*, FCachedPropertyTrack> ObjectTracks;
+	TMap<UObject*, FCachedPropertyTrack> ObjectTracks;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
-		USkyLightComponent* SkyLightComponent;
+	USkyLightComponent* SkyLightComponent;
 
 public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
-		bool bBlending;
+	bool bBlending;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
-		float CurrentBlendTime;
+	float CurrentBlendTime;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
-		float BlendAlpha;
+	float BlendAlpha;
 
 private:
 	TMap<UObject*, FObjectMood> OriginalObjectStates;
