@@ -60,10 +60,13 @@ public:
 	FTransform Transform;
 
 	UPROPERTY()
-	TMap<FName, float> Floats;
+	TMap<UFloatProperty*, float> Floats;
 
 	UPROPERTY()
-	TMap<FName, FLinearColor> Colors;
+	TMap<UStructProperty*, FLinearColor> Colors;
+
+	UPROPERTY()
+	TMap<UStructProperty*, FLinearColor> LinearColors;
 
 	FObjectMood() 
 	{
@@ -117,19 +120,16 @@ public:
 	void SetMood(const int32 NewTime, const bool bForce);
 
 private:
-	void CacheSequencerCollection(const UMovieSceneMaterialParameterCollectionTrack* Track);
-	void CacheCurrentCollection(UMaterialParameterCollection* Collection);
-
-	void CacheSequencerObject(UObject* Object, const TArray<UMovieScenePropertyTrack*> Tracks);
-	void CacheCurrentObject(UObject * Object);
+	void CacheCollection(const UMovieSceneMaterialParameterCollectionTrack* Track);
+	void CacheObject(UObject* Object, const TArray<UMovieScenePropertyTrack*> Tracks);
 
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
-	void UpdateBlend();
+	void UpdateMood();
 	void UpdateCollection(UMaterialParameterCollection * Collection, FCollectionMood& NewState);
-	void UpdateObject(UObject* Object, FObjectMood& NewState);
+	void UpdateObject(UObject* Object, FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack);
 
 public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0))
@@ -183,6 +183,9 @@ public:
 	float BlendAlpha;
 
 private:
+	UPROPERTY(Transient)
+	UWorld* World;
+
 	TMap<UObject*, FObjectMood> OriginalObjectStates;
 	TMap<UObject*, FObjectMood> OldObjectStates;
 	TMap<UObject*, FObjectMood> NewObjectStates;
