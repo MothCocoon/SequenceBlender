@@ -5,6 +5,7 @@
 
 class ULevelSequence;
 class UMovieScene;
+class UMaterialParameterCollection;
 class UMovieSceneMaterialParameterCollectionTrack;
 class UMovieScenePropertyTrack;
 class USkyLightComponent;
@@ -19,21 +20,21 @@ struct FCachedPropertyTrack
 
 public:
 	UPROPERTY()
-	AActor* Actor;
+	TWeakObjectPtr<AActor> Actor;
 
 	UPROPERTY()
-	USceneComponent* Component;
+	TWeakObjectPtr<USceneComponent> Component;
 
 	UPROPERTY()
-	TArray<UMovieScenePropertyTrack*> Tracks;
+	TArray<TWeakObjectPtr<UMovieScenePropertyTrack>> Tracks;
 
-	FCachedPropertyTrack() 
+	FCachedPropertyTrack()
 	{
 		Actor = nullptr;
 		Component = nullptr;
 	}
 
-	FCachedPropertyTrack(AActor* InActor, USceneComponent* InComponent, const TArray<UMovieScenePropertyTrack*> InTracks)
+	FCachedPropertyTrack(AActor* InActor, USceneComponent* InComponent, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>> InTracks)
 	{
 		Actor = InActor;
 		Component = InComponent;
@@ -105,33 +106,6 @@ class UMoodBlenderComponent final : public UActorComponent
 	GENERATED_UCLASS_BODY()
 
 public:
-	virtual void OnRegister() override;
-	void CacheTracks();
-	
-	UFUNCTION(BlueprintPure, Category = Mood)
-	USceneComponent* GetMoodComponent(const TSubclassOf<USceneComponent> Class);
-
-	void Init();
-
-	UFUNCTION(BlueprintCallable, Category = Mood)
-	void RecaptureSky();
-
-	UFUNCTION(BlueprintCallable, Category = Mood)
-	void SetMood(const int32 NewTime, const bool bForce);
-
-private:
-	void CacheCollection(const UMovieSceneMaterialParameterCollectionTrack* Track);
-	void CacheObject(UObject* Object, const TArray<UMovieScenePropertyTrack*> Tracks);
-
-public:
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-private:
-	void UpdateMood();
-	void UpdateCollection(UMaterialParameterCollection * Collection, FCollectionMood& NewState);
-	void UpdateObject(UObject* Object, FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack);
-
-public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0))
 	int32 ForceTime;
 
@@ -163,16 +137,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = Mood, Transient)
 	UMovieScene* MoodMovie;
 
-	UPROPERTY(Transient)
-	TArray<UMovieSceneMaterialParameterCollectionTrack*> CollectionTracks;
-
-	UPROPERTY(Transient)
-	TMap<UObject*, FCachedPropertyTrack> ObjectTracks;
-
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
 	USkyLightComponent* SkyLightComponent;
 
-public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
 	bool bBlending;
 
@@ -184,13 +151,41 @@ public:
 
 private:
 	UPROPERTY(Transient)
-	UWorld* World;
+	TWeakObjectPtr<UWorld> World;
 
-	TMap<UObject*, FObjectMood> OriginalObjectStates;
-	TMap<UObject*, FObjectMood> OldObjectStates;
-	TMap<UObject*, FObjectMood> NewObjectStates;
+	TMap<TWeakObjectPtr<UObject>, FCachedPropertyTrack> ObjectTracks;
+	TArray<TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>> CollectionTracks;
 
-	TMap<UMaterialParameterCollection*, FCollectionMood> OriginalCollectionStates;
-	TMap<UMaterialParameterCollection*, FCollectionMood> OldCollectionStates;
-	TMap<UMaterialParameterCollection*, FCollectionMood> NewCollectionStates;
+	TMap<TWeakObjectPtr<UObject>, FObjectMood> OldObjectStates;
+	TMap<TWeakObjectPtr<UObject>, FObjectMood> NewObjectStates;
+
+	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> OldCollectionStates;
+	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> NewCollectionStates;
+
+public:
+	virtual void OnRegister() override;
+	void CacheTracks();
+
+	UFUNCTION(BlueprintPure, Category = Mood)
+	USceneComponent* GetMoodComponent(const TSubclassOf<USceneComponent> Class);
+
+	void Init();
+
+	UFUNCTION(BlueprintCallable, Category = Mood)
+	void RecaptureSky();
+
+	UFUNCTION(BlueprintCallable, Category = Mood)
+	void SetMood(const int32 NewTime, const bool bForce);
+
+private:
+	void CacheCollection(UMovieSceneMaterialParameterCollectionTrack* Track);
+	void CacheObject(UObject* Object, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& Tracks);
+
+public:
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+private:
+	void UpdateMood();
+	void UpdateCollection(UMaterialParameterCollection* Collection, const FCollectionMood& NewState);
+	void UpdateObject(UObject* Object, const FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack);
 };
