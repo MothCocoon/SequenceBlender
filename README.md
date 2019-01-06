@@ -1,5 +1,3 @@
-# Mood Blender Component
-
 Mood Blender component is used for easy blending between "mood states" of the world during game. Setting of day-night cycle or weather state are examples of such "mood state".
 
 Sequencer is used as WYSIWYG editor for these states. Every world state is represented as a single frame. 
