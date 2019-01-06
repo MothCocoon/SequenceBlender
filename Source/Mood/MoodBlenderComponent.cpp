@@ -6,6 +6,7 @@
 #include "LevelSequence.h"
 #include "LevelSequenceActor.h"
 #include "LevelSequencePlayer.h"
+#include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "MovieScene3DTransformSection.h"
 #include "MovieScene3DTransformTrack.h"
@@ -84,11 +85,11 @@ void UMoodBlenderComponent::CacheTracks()
 				{
 					if (Binding.GetObjectGuid() != ObjectGuid) continue;
 
-					TArray<UMovieScenePropertyTrack*> PropertyTracks;
+					TArray<TWeakObjectPtr<UMovieScenePropertyTrack>> PropertyTracks;
 					for (UMovieSceneTrack* Track : Binding.GetTracks())
 					{
-						UMovieScenePropertyTrack* PropertyTrack = Cast<UMovieScenePropertyTrack>(Track);
-						if (PropertyTrack)
+						TWeakObjectPtr<UMovieScenePropertyTrack> PropertyTrack = Cast<UMovieScenePropertyTrack>(Track);
+						if (PropertyTrack.IsValid())
 						{
 							PropertyTracks.Add(PropertyTrack);
 						}
@@ -111,7 +112,7 @@ void UMoodBlenderComponent::CacheTracks()
 
 USceneComponent* UMoodBlenderComponent::GetMoodComponent(const TSubclassOf<USceneComponent> Class)
 {
-	for (const TPair<UObject*, FCachedPropertyTrack>& Object : ObjectTracks)
+	for (const TPair<TWeakObjectPtr<UObject>, FCachedPropertyTrack>& Object : ObjectTracks)
 	{
 		if (Object.Key->IsA(Class))
 		{
@@ -156,17 +157,23 @@ void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 	// cache all collections
 	OldCollectionStates.Empty();
 	NewCollectionStates.Empty();
-	for (const UMovieSceneMaterialParameterCollectionTrack* Track : CollectionTracks)
+	for (TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>& Track : CollectionTracks)
 	{
-		CacheCollection(Track);
+		if (Track.IsValid())
+		{
+			CacheCollection(Track.Get());
+		}
 	}
 
 	// cache all objects
 	OldObjectStates.Empty();
 	NewObjectStates.Empty();
-	for (const TPair<UObject*, FCachedPropertyTrack>& Object : ObjectTracks)
+	for (TPair<TWeakObjectPtr<UObject>, FCachedPropertyTrack>& Object : ObjectTracks)
 	{
-		CacheObject(Object.Key, Object.Value.Tracks);
+		if (Object.Key.IsValid())
+		{
+			CacheObject(Object.Key.Get(), Object.Value.Tracks);
+		}
 	}
 
 	// call update
@@ -177,7 +184,7 @@ void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 			BlendAlpha = 1.0f;
 			UpdateMood();
 		}
-		else if (World->WorldType == EWorldType::Game || World->WorldType == EWorldType::PIE)
+		else if (World.Get()->WorldType == EWorldType::Game || World.Get()->WorldType == EWorldType::PIE)
 		{
 			BlendAlpha = 0.0f;
 			bBlending = true;
@@ -186,17 +193,19 @@ void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 	}
 }
 
-void UMoodBlenderComponent::CacheCollection(const UMovieSceneMaterialParameterCollectionTrack* Track)
+void UMoodBlenderComponent::CacheCollection(UMovieSceneMaterialParameterCollectionTrack* Track)
 {
-	FCollectionMood& OldState = OldCollectionStates.FindOrAdd(Track->MPC);
-	FCollectionMood& NewState = NewCollectionStates.FindOrAdd(Track->MPC);
+	UMaterialParameterCollection* MPC = Track->MPC;
+
+	FCollectionMood& OldState = OldCollectionStates.FindOrAdd(MPC);
+	FCollectionMood& NewState = NewCollectionStates.FindOrAdd(MPC);
 
 	const UMovieSceneParameterSection* Section = Cast<UMovieSceneParameterSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrameNumber));
 	if (Section)
 	{
 		for (const FScalarParameterNameAndCurve ScalarCurve : Section->GetScalarParameterNamesAndCurves())
 		{
-			OldState.Scalars.Add(ScalarCurve.ParameterName, UKismetMaterialLibrary::GetScalarParameterValue(World, Track->MPC, ScalarCurve.ParameterName));
+			OldState.Scalars.Add(ScalarCurve.ParameterName, UKismetMaterialLibrary::GetScalarParameterValue(World.Get(), MPC, ScalarCurve.ParameterName));
 
 			float NewFloat;
 			ScalarCurve.ParameterCurve.Evaluate(CurrentFrameTime, NewFloat);
@@ -207,7 +216,7 @@ void UMoodBlenderComponent::CacheCollection(const UMovieSceneMaterialParameterCo
 
 		for (const FColorParameterNameAndCurves ColorCurve : Section->GetColorParameterNamesAndCurves())
 		{
-			OldState.Colors.Add(ColorCurve.ParameterName, UKismetMaterialLibrary::GetVectorParameterValue(World, Track->MPC, ColorCurve.ParameterName));
+			OldState.Colors.Add(ColorCurve.ParameterName, UKismetMaterialLibrary::GetVectorParameterValue(World.Get(), MPC, ColorCurve.ParameterName));
 
 			FLinearColor Color;
 			ColorCurve.RedCurve.Evaluate(CurrentFrameTime, Color.R);
@@ -221,13 +230,16 @@ void UMoodBlenderComponent::CacheCollection(const UMovieSceneMaterialParameterCo
 	}
 }
 
-void UMoodBlenderComponent::CacheObject(UObject* Object, const TArray<UMovieScenePropertyTrack*> Tracks)
+void UMoodBlenderComponent::CacheObject(UObject* Object, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& Tracks)
 {
 	FObjectMood& OldState = OldObjectStates.FindOrAdd(Object);
 	FObjectMood& NewState = NewObjectStates.FindOrAdd(Object);
 
-	for (const UMovieScenePropertyTrack* Track : Tracks)
+	for (const TWeakObjectPtr<UMovieScenePropertyTrack>& TrackPtr : Tracks)
 	{
+		if (!TrackPtr.IsValid()) { continue; }
+
+		const UMovieScenePropertyTrack* Track = TrackPtr.Get();
 		if (Track->GetClass() == UMovieScene3DTransformTrack::StaticClass())
 		{
 			if (const USceneComponent* Component = Cast<USceneComponent>(Object))
@@ -331,40 +343,43 @@ void UMoodBlenderComponent::UpdateMood()
 {
 	if (bBlending)
 	{
-		CurrentBlendTime = FMath::Clamp(CurrentBlendTime + World->GetDeltaSeconds(), 0.0f, BlendTime);
+		CurrentBlendTime = FMath::Clamp(CurrentBlendTime + World.Get()->GetDeltaSeconds(), 0.0f, BlendTime);
 		BlendAlpha = FMath::Clamp(CurrentBlendTime / BlendTime, 0.0f, 1.0f);
 	}
 
 	// update properties
-	for (TPair<UMaterialParameterCollection*, FCollectionMood> Pair : NewCollectionStates)
+	for (TPair<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood>& Pair : NewCollectionStates)
 	{
-		if (Pair.Value.bValid)
+		if (Pair.Key.IsValid() && Pair.Value.bValid)
 		{
-			UpdateCollection(Pair.Key, Pair.Value);
+			UpdateCollection(Pair.Key.Get(), Pair.Value);
 		}
 	}
-	for (TPair<UObject*, FObjectMood> Pair : NewObjectStates)
+	for (TPair<TWeakObjectPtr<UObject>, FObjectMood>& Pair : NewObjectStates)
 	{
-		if (Pair.Value.bValid)
+		if (Pair.Key.IsValid() && Pair.Value.bValid)
 		{
-			UpdateObject(Pair.Key, Pair.Value, ObjectTracks[Pair.Key]);
+			UpdateObject(Pair.Key.Get(), Pair.Value, ObjectTracks[Pair.Key]);
 		}
 	}
 
 	// apply changes
-	for (const UMovieSceneMaterialParameterCollectionTrack* Track : CollectionTracks)
+	for (const TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>& Track : CollectionTracks)
 	{
-		World->GetParameterCollectionInstance(Track->MPC)->UpdateRenderState();
-	}
-	for (const TPair<UObject*, FCachedPropertyTrack>& Object : ObjectTracks)
-	{
-		if (Object.Value.Component)
+		if (Track.IsValid())
 		{
-			Object.Value.Component->MarkRenderStateDirty();
+			World.Get()->GetParameterCollectionInstance(Track.Get()->MPC)->UpdateRenderState();
 		}
-		else if (Object.Value.Actor)
+	}
+	for (const TPair<TWeakObjectPtr<UObject>, FCachedPropertyTrack>& Object : ObjectTracks)
+	{
+		if (Object.Value.Component.IsValid())
 		{
-			Object.Value.Actor->MarkComponentsRenderStateDirty();
+			Object.Value.Component.Get()->MarkRenderStateDirty();
+		}
+		else if (Object.Value.Actor.IsValid())
+		{
+			Object.Value.Actor.Get()->MarkComponentsRenderStateDirty();
 		}
 	}
 
@@ -382,80 +397,53 @@ void UMoodBlenderComponent::UpdateMood()
 	}
 }
 
-void UMoodBlenderComponent::UpdateCollection(UMaterialParameterCollection* Collection, FCollectionMood& NewState)
+void UMoodBlenderComponent::UpdateCollection(UMaterialParameterCollection* Collection, const FCollectionMood& NewState)
 {
-	FCollectionMood& OriginalState = OriginalCollectionStates.FindOrAdd(Collection);
 	FCollectionMood& OldState = OldCollectionStates.FindOrAdd(Collection);
-	if (!OriginalState.bValid)
+
+	for (const TPair<FName, float>& Pair : NewState.Scalars)
 	{
-		OriginalState = OldState;
-		OriginalState.bValid = true;
+		UKismetMaterialLibrary::SetScalarParameterValue(World.Get(), Collection, Pair.Key, FMath::Lerp(OldState.Scalars[Pair.Key], Pair.Value, BlendAlpha));
 	}
 
-	if (NewState.Scalars.Num() > 0 && OldState.Scalars.Num() > 0)
+	for (const TPair<FName, FLinearColor>& Pair : NewState.Colors)
 	{
-		for (const TPair<FName, float> Pair : NewState.Scalars)
-		{
-			UKismetMaterialLibrary::SetScalarParameterValue(World, Collection, Pair.Key, FMath::Lerp(OldState.Scalars[Pair.Key], Pair.Value, BlendAlpha));
-		}
-	}
-
-	if (NewState.Colors.Num() > 0 && OldState.Colors.Num() > 0)
-	{
-		for (const TPair<FName, FLinearColor> Pair : NewState.Colors)
-		{
-			UKismetMaterialLibrary::SetVectorParameterValue(World, Collection, Pair.Key, UKismetMathLibrary::LinearColorLerp(OldState.Colors[Pair.Key], Pair.Value, BlendAlpha));
-		}
+		UKismetMaterialLibrary::SetVectorParameterValue(World.Get(), Collection, Pair.Key, UKismetMathLibrary::LinearColorLerp(OldState.Colors[Pair.Key], Pair.Value, BlendAlpha));
 	}
 }
 
-void UMoodBlenderComponent::UpdateObject(UObject* Object, FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack)
+void UMoodBlenderComponent::UpdateObject(UObject* Object, const FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack)
 {
-	FObjectMood& OriginalState = OriginalObjectStates.FindOrAdd(Object);
 	FObjectMood& OldState = OldObjectStates.FindOrAdd(Object);
-	if (!OriginalState.bValid)
-	{
-		OriginalState = OldState;
-		OriginalState.bValid = true;
-	}
 
 	if (NewState.bNewTransform)
 	{
 		const FTransform CurrentTransform = UKismetMathLibrary::TLerp(OldState.Transform, NewState.Transform, BlendAlpha);
 
-		if (CachedTrack.Component)
+		if (CachedTrack.Component.IsValid())
 		{
-			CachedTrack.Component->SetRelativeTransform(CurrentTransform);
+			CachedTrack.Component.Get()->SetRelativeTransform(CurrentTransform);
 		}
-		else if (CachedTrack.Actor)
+		else if (CachedTrack.Actor.IsValid())
 		{
-			CachedTrack.Actor->SetActorTransform(CurrentTransform);
-		}
-	}
-
-	if (NewState.Floats.Num() > 0)
-	{
-		for (const TPair<UFloatProperty*, float> Pair : NewState.Floats)
-		{
-			Pair.Key->SetPropertyValue_InContainer(Object, FMath::Lerp(OldState.Floats[Pair.Key], Pair.Value, BlendAlpha));
+			CachedTrack.Actor.Get()->SetActorTransform(CurrentTransform);
 		}
 	}
 
-	if (NewState.Colors.Num() > 0)
+	for (const TPair<UFloatProperty*, float>& Pair : NewState.Floats)
 	{
-		for (const TPair<UStructProperty*, FLinearColor> Pair : NewState.Colors)
-		{
-			const FLinearColor CurrentLinearColor = UKismetMathLibrary::LinearColorLerp(OldState.Colors[Pair.Key], Pair.Value, BlendAlpha);
-			*Pair.Key->ContainerPtrToValuePtr<FColor>(Object) = CurrentLinearColor.ToFColor(true);
-		}
+		Pair.Key->SetPropertyValue_InContainer(Object, FMath::Lerp(OldState.Floats[Pair.Key], Pair.Value, BlendAlpha));
 	}
 
-	if (NewState.LinearColors.Num() > 0)
+	for (const TPair<UStructProperty*, FLinearColor>& Pair : NewState.Colors)
 	{
-		for (const TPair<UStructProperty*, FLinearColor> Pair : NewState.LinearColors)
-		{
-			const FLinearColor CurrentLinearColor = UKismetMathLibrary::LinearColorLerp(OldState.LinearColors[Pair.Key], Pair.Value, BlendAlpha);
-			*Pair.Key->ContainerPtrToValuePtr<FLinearColor>(Object) = CurrentLinearColor;
-		}
+		const FLinearColor CurrentLinearColor = UKismetMathLibrary::LinearColorLerp(OldState.Colors[Pair.Key], Pair.Value, BlendAlpha);
+		*Pair.Key->ContainerPtrToValuePtr<FColor>(Object) = CurrentLinearColor.ToFColor(true);
+	}
+
+	for (const TPair<UStructProperty*, FLinearColor>& Pair : NewState.LinearColors)
+	{
+		const FLinearColor CurrentLinearColor = UKismetMathLibrary::LinearColorLerp(OldState.LinearColors[Pair.Key], Pair.Value, BlendAlpha);
+		*Pair.Key->ContainerPtrToValuePtr<FLinearColor>(Object) = CurrentLinearColor;
 	}
 }
