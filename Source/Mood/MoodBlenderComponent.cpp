@@ -343,8 +343,8 @@ void UMoodBlenderComponent::UpdateMood()
 {
 	if (bBlending)
 	{
-		CurrentBlendTime = FMath::Clamp(CurrentBlendTime + World.Get()->GetDeltaSeconds(), 0.0f, BlendTime);
-		BlendAlpha = FMath::Clamp(CurrentBlendTime / BlendTime, 0.0f, 1.0f);
+		CurrentBlendTime = FMath::Min(CurrentBlendTime + World.Get()->GetDeltaSeconds(), BlendTime);
+		BlendAlpha = FMath::Min(CurrentBlendTime / BlendTime, 1.0f);
 	}
 
 	// update properties
