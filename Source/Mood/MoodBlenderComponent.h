@@ -134,12 +134,6 @@ public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 	float FirstRecaptureDelay = 0.0f;
 
-	UPROPERTY(BlueprintReadOnly, Category = Mood, Transient)
-	UMovieScene* MoodMovie;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
-	USkyLightComponent* SkyLightComponent;
-
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
 	bool bBlending;
 
@@ -150,9 +144,6 @@ public:
 	float BlendAlpha;
 
 private:
-	UPROPERTY(Transient)
-	TWeakObjectPtr<UWorld> World;
-
 	TMap<TWeakObjectPtr<UObject>, FCachedPropertyTrack> ObjectTracks;
 	TArray<TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>> CollectionTracks;
 
@@ -162,12 +153,16 @@ private:
 	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> OldCollectionStates;
 	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> NewCollectionStates;
 
+	TWeakObjectPtr<UWorld> World;
+	TWeakObjectPtr<UMovieScene> MoodMovie;
+	TWeakObjectPtr<USkyLightComponent> SkyLightComponent;
+
 public:
 	virtual void OnRegister() override;
 	void CacheTracks();
 
 	UFUNCTION(BlueprintPure, Category = Mood)
-	USceneComponent* GetMoodComponent(const TSubclassOf<USceneComponent> Class);
+	USceneComponent* GetComponentFromSequence(const TSubclassOf<USceneComponent> Class);
 
 	void Init();
 

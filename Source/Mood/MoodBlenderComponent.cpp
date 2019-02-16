@@ -56,7 +56,7 @@ void UMoodBlenderComponent::CacheTracks()
 	ObjectTracks.Empty();
 
 	// get material collection tracks
-	for (UMovieSceneTrack* Track : MoodMovie->GetMasterTracks())
+	for (UMovieSceneTrack* Track : MoodMovie.Get()->GetMasterTracks())
 	{
 		UMovieSceneMaterialParameterCollectionTrack* CollectionTrack = Cast<UMovieSceneMaterialParameterCollectionTrack>(Track);
 		if (CollectionTrack)
@@ -71,9 +71,9 @@ void UMoodBlenderComponent::CacheTracks()
 	if (SequencePlayer == nullptr) return;
 
 	// get object pointers
-	for (int i = 0; i < MoodMovie->GetPossessableCount(); i++)
+	for (int i = 0; i < MoodMovie.Get()->GetPossessableCount(); i++)
 	{
-		const FGuid& ObjectGuid = MoodMovie->GetPossessable(i).GetGuid();
+		const FGuid& ObjectGuid = MoodMovie.Get()->GetPossessable(i).GetGuid();
 		check(ObjectGuid.IsValid());
 
 		const TArrayView<TWeakObjectPtr<>> FoundObjects = SequencePlayer->FindBoundObjects(ObjectGuid, MovieSceneSequenceID::Root);
@@ -81,7 +81,7 @@ void UMoodBlenderComponent::CacheTracks()
 		{
 			if (UObject* Object = WeakObj.Get())
 			{
-				for (const FMovieSceneBinding& Binding : MoodMovie->GetBindings())
+				for (const FMovieSceneBinding& Binding : MoodMovie.Get()->GetBindings())
 				{
 					if (Binding.GetObjectGuid() != ObjectGuid) continue;
 
@@ -103,14 +103,14 @@ void UMoodBlenderComponent::CacheTracks()
 		}
 	}
 
-	USceneComponent* Component = GetMoodComponent(USkyLightComponent::StaticClass());
+	USceneComponent* Component = GetComponentFromSequence(USkyLightComponent::StaticClass());
 	if (Component)
 	{
 		SkyLightComponent = Cast<USkyLightComponent>(Component);
 	}
 }
 
-USceneComponent* UMoodBlenderComponent::GetMoodComponent(const TSubclassOf<USceneComponent> Class)
+USceneComponent* UMoodBlenderComponent::GetComponentFromSequence(const TSubclassOf<USceneComponent> Class)
 {
 	for (const TPair<TWeakObjectPtr<UObject>, FCachedPropertyTrack>& Object : ObjectTracks)
 	{
@@ -134,19 +134,19 @@ void UMoodBlenderComponent::Init()
 
 void UMoodBlenderComponent::RecaptureSky()
 {
-	if (SkyLightComponent)
+	if (SkyLightComponent.IsValid())
 	{
-		SkyLightComponent->RecaptureSky();
+		SkyLightComponent.Get()->RecaptureSky();
 	}
 }
 
 void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 {
-	if (bBlending || MoodSequence == nullptr) return;
+	if (bBlending || MoodSequence == nullptr || !MoodMovie.IsValid()) return;
 	if (CurrentFrame == NewTime && !bForce) return;
 
-	const FFrameNumber NewFrameNumber = MoodMovie->GetTickResolution().AsFrameNumber(NewTime);
-	if (!MoodMovie->GetPlaybackRange().Contains(NewFrameNumber)) return;
+	const FFrameNumber NewFrameNumber = MoodMovie.Get()->GetTickResolution().AsFrameNumber(NewTime);
+	if (!MoodMovie.Get()->GetPlaybackRange().Contains(NewFrameNumber)) return;
 
 	CurrentFrame = NewTime;
 	CurrentFrameNumber = NewFrameNumber;
