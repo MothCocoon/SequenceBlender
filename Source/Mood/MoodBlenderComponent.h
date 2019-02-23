@@ -144,22 +144,23 @@ public:
 	float BlendAlpha;
 
 private:
-	TMap<TWeakObjectPtr<UObject>, FCachedPropertyTrack> ObjectTracks;
+	TWeakObjectPtr<UMovieScene> MoodMovie;
+
 	TArray<TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>> CollectionTracks;
-
-	TMap<TWeakObjectPtr<UObject>, FObjectMood> OldObjectStates;
-	TMap<TWeakObjectPtr<UObject>, FObjectMood> NewObjectStates;
-
 	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> OldCollectionStates;
 	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> NewCollectionStates;
 
+	TMap<TWeakObjectPtr<UObject>, FCachedPropertyTrack> ObjectTracks;
+	TMap<TWeakObjectPtr<UObject>, FObjectMood> OldObjectStates;
+	TMap<TWeakObjectPtr<UObject>, FObjectMood> NewObjectStates;
+
 	TWeakObjectPtr<UWorld> World;
-	TWeakObjectPtr<UMovieScene> MoodMovie;
 	TWeakObjectPtr<USkyLightComponent> SkyLightComponent;
 
 public:
 	virtual void OnRegister() override;
 	void CacheTracks();
+	void GetPropertyTracks(const TWeakObjectPtr<UMovieScene>& MovieScene, const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks);
 
 	UFUNCTION(BlueprintPure, Category = Mood)
 	USceneComponent* GetComponentFromSequence(const TSubclassOf<USceneComponent> Class);
@@ -174,7 +175,7 @@ public:
 
 private:
 	void CacheCollection(UMovieSceneMaterialParameterCollectionTrack* Track);
-	void CacheObject(UObject* Object, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& Tracks);
+	void CacheObject(UObject* Object, const FCachedPropertyTrack& Cache);
 
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
