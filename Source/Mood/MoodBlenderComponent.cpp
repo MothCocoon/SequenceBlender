@@ -83,8 +83,11 @@ void UMoodBlenderComponent::CacheTracks()
 					TArray<TWeakObjectPtr<UMovieScenePropertyTrack>> PropertyTracks;
 					GetPropertyTracks(MoodMovie, ObjectGuid, PropertyTracks);
 
-					FCachedPropertyTrack NewEntry = FCachedPropertyTrack(Cast<AActor>(Object), Cast<USceneComponent>(Object), PropertyTracks);
-					ObjectTracks.Add(Object, NewEntry);
+					if (PropertyTracks.Num() > 0)
+					{
+						FCachedPropertyTrack NewEntry = FCachedPropertyTrack(Cast<AActor>(Object), Cast<USceneComponent>(Object), PropertyTracks);
+						ObjectTracks.Add(Object, NewEntry);
+					}
 				}
 			}
 		}
@@ -162,7 +165,7 @@ void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 			// cache all collections
 			OldCollectionStates.Empty();
 			NewCollectionStates.Empty();
-			for (TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>& Track : CollectionTracks)
+			for (const TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>& Track : CollectionTracks)
 			{
 				if (Track.IsValid())
 				{
@@ -173,7 +176,7 @@ void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 			// cache all objects
 			OldObjectStates.Empty();
 			NewObjectStates.Empty();
-			for (TPair<TWeakObjectPtr<UObject>, FCachedPropertyTrack>& Object : ObjectTracks)
+			for (const TPair<TWeakObjectPtr<UObject>, FCachedPropertyTrack>& Object : ObjectTracks)
 			{
 				if (Object.Key.IsValid())
 				{
