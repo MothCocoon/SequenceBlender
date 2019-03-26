@@ -54,6 +54,7 @@ void UMoodBlenderComponent::OnRegister()
 void UMoodBlenderComponent::CacheTracks()
 {
 	CollectionTracks.Empty();
+	Collections.Empty();
 	ObjectTracks.Empty();
 
 	// get material collection tracks
@@ -61,7 +62,8 @@ void UMoodBlenderComponent::CacheTracks()
 	{
 		if (UMovieSceneMaterialParameterCollectionTrack* CollectionTrack = Cast<UMovieSceneMaterialParameterCollectionTrack>(Track))
 		{
-			CollectionTracks.AddUnique(CollectionTrack);
+			CollectionTracks.Add(CollectionTrack);
+			Collections.Add(CollectionTrack->MPC);
 		}
 	}
 
@@ -367,11 +369,11 @@ void UMoodBlenderComponent::UpdateMood()
 	}
 
 	// apply changes
-	for (const TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>& Track : CollectionTracks)
+	for (const TWeakObjectPtr<UMaterialParameterCollection>& Collection : Collections)
 	{
-		if (Track.IsValid())
+		if (Collection.IsValid())
 		{
-			World.Get()->GetParameterCollectionInstance(Track.Get()->MPC)->UpdateRenderState();
+			World.Get()->GetParameterCollectionInstance(Collection.Get())->UpdateRenderState();
 		}
 	}
 	for (const TPair<TWeakObjectPtr<UObject>, FCachedPropertyTrack>& Object : ObjectTracks)
