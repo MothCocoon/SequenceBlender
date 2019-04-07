@@ -4,8 +4,6 @@
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "LevelSequence.h"
-#include "LevelSequenceActor.h"
-#include "LevelSequencePlayer.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "MovieScene3DTransformSection.h"
@@ -67,37 +65,65 @@ void UMoodBlenderComponent::CacheTracks()
 		}
 	}
 
-	ALevelSequenceActor* SequenceActor; // sequence player is needed to obtain object references
-	ULevelSequencePlayer* SequencePlayer = ULevelSequencePlayer::CreateLevelSequencePlayer(this, MoodSequence, FMovieSceneSequencePlaybackSettings(), SequenceActor);
-	if (SequencePlayer)
+	// get object tracks
+	TArray<UObject*, TInlineAllocator<1>> AllFoundActors;
+	TArray<FGuid> ComponentGuids;
+	for (int i = 0; i < MoodMovie.Get()->GetPossessableCount(); i++)
 	{
-		// get object pointers
-		for (int i = 0; i < MoodMovie.Get()->GetPossessableCount(); i++)
+		const FGuid& ObjectGuid = MoodMovie.Get()->GetPossessable(i).GetGuid();
+		if (ObjectGuid.IsValid())
 		{
-			const FGuid& ObjectGuid = MoodMovie.Get()->GetPossessable(i).GetGuid();
-			check(ObjectGuid.IsValid());
-
-			const TArrayView<TWeakObjectPtr<>> FoundObjects = SequencePlayer->FindBoundObjects(ObjectGuid, MovieSceneSequenceID::Root);
-			for (const TWeakObjectPtr<> WeakObj : FoundObjects)
+			TArray<UObject*, TInlineAllocator<1>> FoundObjects;
+			MoodSequence->LocateBoundObjects(ObjectGuid, GetWorld(), FoundObjects);
+			
+			if (FoundObjects.Num() > 0)
 			{
-				if (UObject* Object = WeakObj.Get())
+				for (UObject* Object : FoundObjects)
 				{
-					TArray<TWeakObjectPtr<UMovieScenePropertyTrack>> PropertyTracks;
-					GetPropertyTracks(MoodMovie, ObjectGuid, PropertyTracks);
-
-					if (PropertyTracks.Num() > 0)
-					{
-						FCachedPropertyTrack NewEntry = FCachedPropertyTrack(Cast<AActor>(Object), Cast<USceneComponent>(Object), PropertyTracks);
-						ObjectTracks.Add(Object, NewEntry);
-					}
+					CacheObjectTrack(Object, ObjectGuid);
 				}
+				AllFoundActors.Append(FoundObjects);
+			}
+			else
+			{
+				ComponentGuids.Add(ObjectGuid);
 			}
 		}
-
-		if (USceneComponent* Component = GetComponentFromSequence(USkyLightComponent::StaticClass()))
+	}
+	for (const FGuid& ComponentGuid : ComponentGuids)
+	{
+		for (UObject* BoundActor : AllFoundActors)
 		{
-			SkyLightComponent = Cast<USkyLightComponent>(Component);
+			TArray<UObject*, TInlineAllocator<1>> FoundObjects;
+			MoodSequence->LocateBoundObjects(ComponentGuid, BoundActor, FoundObjects);
+			
+			if (FoundObjects.Num() > 0)
+			{
+				for (UObject* Object : FoundObjects)
+				{
+					CacheObjectTrack(Object, ComponentGuid);
+				}
+				break;
+			}
 		}
+	}
+
+	// get direct reference to skylight component, used by RecaptureSky()
+	if (USceneComponent* Component = GetComponentFromSequence(USkyLightComponent::StaticClass()))
+	{
+		SkyLightComponent = Cast<USkyLightComponent>(Component);
+	}
+}
+
+void UMoodBlenderComponent::CacheObjectTrack(UObject* Object, const FGuid& ObjectGuid)
+{
+	TArray<TWeakObjectPtr<UMovieScenePropertyTrack>> PropertyTracks;
+	GetPropertyTracks(MoodMovie, ObjectGuid, PropertyTracks);
+
+	if (PropertyTracks.Num() > 0)
+	{
+		FCachedPropertyTrack NewEntry = FCachedPropertyTrack(Cast<AActor>(Object), Cast<USceneComponent>(Object), PropertyTracks);
+		ObjectTracks.Add(Object, NewEntry);
 	}
 }
 
@@ -373,7 +399,7 @@ void UMoodBlenderComponent::UpdateMood()
 	{
 		if (Collection.IsValid())
 		{
-			World.Get()->GetParameterCollectionInstance(Collection.Get())->UpdateRenderState();
+			World.Get()->GetParameterCollectionInstance(Collection.Get())->UpdateRenderState(true);
 		}
 	}
 	for (const TPair<TWeakObjectPtr<UObject>, FCachedPropertyTrack>& Object : ObjectTracks)
