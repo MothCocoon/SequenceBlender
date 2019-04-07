@@ -161,6 +161,7 @@ private:
 public:
 	virtual void OnRegister() override;
 	void CacheTracks();
+	void CacheObjectTrack(UObject* Object, const FGuid& ObjectGuid);
 	void GetPropertyTracks(const TWeakObjectPtr<UMovieScene>& MovieScene, const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks);
 
 	UFUNCTION(BlueprintPure, Category = Mood)
