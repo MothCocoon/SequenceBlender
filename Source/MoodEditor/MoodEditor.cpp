@@ -2,7 +2,7 @@
 
 #define LOCTEXT_NAMESPACE "MoodEditor"
 
-IMPLEMENT_MODULE(FMoodEditor, "MoodEditor")
+IMPLEMENT_GAME_MODULE(FMoodEditor, MoodEditor)
 
 void FMoodEditor::StartupModule()
 {
