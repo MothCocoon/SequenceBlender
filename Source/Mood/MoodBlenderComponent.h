@@ -147,7 +147,6 @@ private:
 	TWeakObjectPtr<UMovieScene> MoodMovie;
 
 	TSet<TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>> CollectionTracks;
-	TSet<TWeakObjectPtr<UMaterialParameterCollection>> Collections;
 	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> OldCollectionStates;
 	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> NewCollectionStates;
 
