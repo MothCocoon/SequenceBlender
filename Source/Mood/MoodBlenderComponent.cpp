@@ -1,23 +1,26 @@
 #include "MoodBlenderComponent.h"
 
+#include "Channels/MovieSceneChannelProxy.h"
 #include "Components/SkyLightComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "LevelSequence.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
-#include "MovieScene3DTransformSection.h"
-#include "MovieScene3DTransformTrack.h"
-#include "MovieSceneChannelProxy.h"
-#include "MovieSceneColorSection.h"
-#include "MovieSceneColorTrack.h"
-#include "MovieSceneCommonHelpers.h"
-#include "MovieSceneFloatSection.h"
-#include "MovieSceneFloatTrack.h"
-#include "MovieSceneMaterialParameterCollectionTrack.h"
-#include "MovieSceneParameterSection.h"
-#include "MovieScenePropertyTrack.h"
+#include "MovieScene/Public/MovieSceneCommonHelpers.h"
+
+#include "Sections/MovieScene3DTransformSection.h"
+#include "Sections/MovieSceneColorSection.h"
+#include "Sections/MovieSceneFloatSection.h"
+#include "Sections/MovieSceneParameterSection.h"
+
 #include "TimerManager.h"
+
+#include "Tracks/MovieScene3DTransformTrack.h"
+#include "Tracks/MovieSceneColorTrack.h"
+#include "Tracks/MovieSceneFloatTrack.h"
+#include "Tracks/MovieSceneMaterialParameterCollectionTrack.h"
+#include "Tracks/MovieScenePropertyTrack.h"
 
 UMoodBlenderComponent::UMoodBlenderComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -430,7 +433,7 @@ void UMoodBlenderComponent::UpdateCollection(UMaterialParameterCollection* Colle
 
 	for (const TPair<FName, FLinearColor>& Pair : NewState.Colors)
 	{
-		UKismetMaterialLibrary::SetVectorParameterValue(World.Get(), Collection, Pair.Key, UKismetMathLibrary::LinearColorLerp(OldState.Colors[Pair.Key], Pair.Value, BlendAlpha));
+		UKismetMaterialLibrary::SetVectorParameterValue(World.Get(), Collection, Pair.Key, FMath::Lerp(OldState.Colors[Pair.Key], Pair.Value, BlendAlpha));
 	}
 }
 
@@ -459,13 +462,13 @@ void UMoodBlenderComponent::UpdateObject(UObject* Object, const FObjectMood& New
 
 	for (const TPair<UStructProperty*, FLinearColor>& Pair : NewState.Colors)
 	{
-		const FLinearColor CurrentLinearColor = UKismetMathLibrary::LinearColorLerp(OldState.Colors[Pair.Key], Pair.Value, BlendAlpha);
+		const FLinearColor CurrentLinearColor = FMath::Lerp(OldState.Colors[Pair.Key], Pair.Value, BlendAlpha);
 		*Pair.Key->ContainerPtrToValuePtr<FColor>(Object) = CurrentLinearColor.ToFColor(true);
 	}
 
 	for (const TPair<UStructProperty*, FLinearColor>& Pair : NewState.LinearColors)
 	{
-		const FLinearColor CurrentLinearColor = UKismetMathLibrary::LinearColorLerp(OldState.LinearColors[Pair.Key], Pair.Value, BlendAlpha);
+		const FLinearColor CurrentLinearColor = FMath::Lerp(OldState.LinearColors[Pair.Key], Pair.Value, BlendAlpha);
 		*Pair.Key->ContainerPtrToValuePtr<FLinearColor>(Object) = CurrentLinearColor;
 	}
 }

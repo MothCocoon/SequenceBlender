@@ -7,5 +7,7 @@ public class MoodTarget : TargetRules
     {
         Type = TargetType.Game;
         ExtraModuleNames.Add("Mood");
+
+        DefaultBuildSettings = BuildSettingsVersion.V2;
     }
 }

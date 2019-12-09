@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ModuleInterface.h"
-#include "ModuleManager.h"
+#include "Modules/ModuleManager.h"
+#include "Modules/ModuleInterface.h"
 
 class FMoodEditor : public IModuleInterface
 {
