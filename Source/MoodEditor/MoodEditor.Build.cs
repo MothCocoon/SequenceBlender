@@ -23,15 +23,5 @@ public class MoodEditor : ModuleRules
                 "UnrealEd"
             }
         );
-
-        PrivateIncludePathModuleNames.AddRange(
-            new string[]
-            {
-            }
-        );
-
-        // faster compilation
-        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-        bFasterWithoutUnity = true;
     }
 }

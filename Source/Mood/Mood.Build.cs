@@ -24,16 +24,5 @@ public class Mood : ModuleRules
                 "SlateCore",
             }
         );
-
-        DynamicallyLoadedModuleNames.AddRange(
-            new string[]
-            {
-                // ... add any modules that your module loads dynamically here ...
-			}
-        );
-
-        // faster compilation
-        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-        bFasterWithoutUnity = true;
     }
 }
