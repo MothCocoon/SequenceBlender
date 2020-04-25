@@ -123,12 +123,12 @@ void UMoodBlenderComponent::CacheObjectTrack(UObject* Object, const FGuid& Objec
 
 	if (PropertyTracks.Num() > 0)
 	{
-		FCachedPropertyTrack NewEntry = FCachedPropertyTrack(Cast<AActor>(Object), Cast<USceneComponent>(Object), PropertyTracks);
+		const FCachedPropertyTrack NewEntry = FCachedPropertyTrack(Cast<AActor>(Object), Cast<USceneComponent>(Object), PropertyTracks);
 		ObjectTracks.Add(Object, NewEntry);
 	}
 }
 
-void UMoodBlenderComponent::GetPropertyTracks(const TWeakObjectPtr<UMovieScene>& MovieScene, const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks)
+void UMoodBlenderComponent::GetPropertyTracks(const TWeakObjectPtr<UMovieScene>& MovieScene, const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks) const
 {
 	for (const FMovieSceneBinding& Binding : MovieScene.Get()->GetBindings())
 	{
@@ -168,7 +168,7 @@ void UMoodBlenderComponent::Init()
 	}
 }
 
-void UMoodBlenderComponent::RecaptureSky()
+void UMoodBlenderComponent::RecaptureSky() const
 {
 	if (SkyLightComponent.IsValid())
 	{
