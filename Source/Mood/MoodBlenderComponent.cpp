@@ -6,7 +6,6 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "LevelSequence.h"
 #include "Materials/MaterialParameterCollection.h"
-#include "Materials/MaterialParameterCollectionInstance.h"
 #include "MovieScene/Public/MovieSceneCommonHelpers.h"
 
 #include "Sections/MovieScene3DTransformSection.h"
@@ -311,7 +310,7 @@ void UMoodBlenderComponent::CacheObject(UObject* Object, const FCachedPropertyTr
 
 		if (Track->GetClass() == UMovieSceneFloatTrack::StaticClass())
 		{
-			UFloatProperty* Property = FindField<UFloatProperty>(Object->GetClass(), Track->GetPropertyName());
+			FFloatProperty* Property = FindFProperty<FFloatProperty>(Object->GetClass(), Track->GetPropertyName());
 			const UMovieSceneFloatSection* Section = Cast<UMovieSceneFloatSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrameNumber));
 			if (Property && Section)
 			{
@@ -327,7 +326,7 @@ void UMoodBlenderComponent::CacheObject(UObject* Object, const FCachedPropertyTr
 
 		if (Track->GetClass() == UMovieSceneColorTrack::StaticClass())
 		{
-			UStructProperty* Property = FindField<UStructProperty>(Object->GetClass(), Track->GetPropertyName());
+			FStructProperty* Property = FindFProperty<FStructProperty>(Object->GetClass(), Track->GetPropertyName());
 			const UMovieSceneColorSection* Section = Cast<UMovieSceneColorSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrameNumber));
 			if (Property && Section)
 			{
@@ -350,10 +349,10 @@ void UMoodBlenderComponent::CacheObject(UObject* Object, const FCachedPropertyTr
 				{
 					const FLinearColor Value = FLinearColor
 					(
-						Cast<UFloatProperty>(ScriptStruct->FindPropertyByName("R"))->GetDefaultPropertyValue(),
-						Cast<UFloatProperty>(ScriptStruct->FindPropertyByName("G"))->GetDefaultPropertyValue(),
-						Cast<UFloatProperty>(ScriptStruct->FindPropertyByName("B"))->GetDefaultPropertyValue(),
-						Cast<UFloatProperty>(ScriptStruct->FindPropertyByName("A"))->GetDefaultPropertyValue()
+						CastField<FFloatProperty>(ScriptStruct->FindPropertyByName("R"))->GetDefaultPropertyValue(),
+						CastField<FFloatProperty>(ScriptStruct->FindPropertyByName("G"))->GetDefaultPropertyValue(),
+						CastField<FFloatProperty>(ScriptStruct->FindPropertyByName("B"))->GetDefaultPropertyValue(),
+						CastField<FFloatProperty>(ScriptStruct->FindPropertyByName("A"))->GetDefaultPropertyValue()
 					);
 					OldState.LinearColors.Add(Property, Value);
 
@@ -455,18 +454,18 @@ void UMoodBlenderComponent::UpdateObject(UObject* Object, const FObjectMood& New
 		}
 	}
 
-	for (const TPair<UFloatProperty*, float>& Pair : NewState.Floats)
+	for (const TPair<FFloatProperty*, float>& Pair : NewState.Floats)
 	{
 		Pair.Key->SetPropertyValue_InContainer(Object, FMath::Lerp(OldState.Floats[Pair.Key], Pair.Value, BlendAlpha));
 	}
 
-	for (const TPair<UStructProperty*, FLinearColor>& Pair : NewState.Colors)
+	for (const TPair<FStructProperty*, FLinearColor>& Pair : NewState.Colors)
 	{
 		const FLinearColor CurrentLinearColor = FMath::Lerp(OldState.Colors[Pair.Key], Pair.Value, BlendAlpha);
 		*Pair.Key->ContainerPtrToValuePtr<FColor>(Object) = CurrentLinearColor.ToFColor(true);
 	}
 
-	for (const TPair<UStructProperty*, FLinearColor>& Pair : NewState.LinearColors)
+	for (const TPair<FStructProperty*, FLinearColor>& Pair : NewState.LinearColors)
 	{
 		const FLinearColor CurrentLinearColor = FMath::Lerp(OldState.LinearColors[Pair.Key], Pair.Value, BlendAlpha);
 		*Pair.Key->ContainerPtrToValuePtr<FLinearColor>(Object) = CurrentLinearColor;
