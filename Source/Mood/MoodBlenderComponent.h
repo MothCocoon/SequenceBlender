@@ -18,14 +18,8 @@ struct FCachedPropertyTrack
 {
 	GENERATED_BODY()
 
-public:
-	UPROPERTY()
 	TWeakObjectPtr<AActor> Actor;
-
-	UPROPERTY()
 	TWeakObjectPtr<USceneComponent> Component;
-
-	UPROPERTY()
 	TArray<TWeakObjectPtr<UMovieScenePropertyTrack>> Tracks;
 
 	FCachedPropertyTrack()
@@ -50,24 +44,13 @@ struct FObjectMood
 {
 	GENERATED_BODY()
 
-public:
-	UPROPERTY()
 	bool bValid;
-
-	UPROPERTY()
 	bool bNewTransform;
-
-	UPROPERTY()
 	FTransform Transform;
 
-	UPROPERTY()
-	TMap<UFloatProperty*, float> Floats;
-
-	UPROPERTY()
-	TMap<UStructProperty*, FLinearColor> Colors;
-
-	UPROPERTY()
-	TMap<UStructProperty*, FLinearColor> LinearColors;
+	TMap<FFloatProperty*, float> Floats;
+	TMap<FStructProperty*, FLinearColor> Colors;
+	TMap<FStructProperty*, FLinearColor> LinearColors;
 
 	FObjectMood() 
 	{
@@ -84,14 +67,8 @@ struct FCollectionMood
 {
 	GENERATED_BODY()
 
-public:
-	UPROPERTY()
 	bool bValid;
-
-	UPROPERTY()
 	TMap<FName, float> Scalars;
-
-	UPROPERTY()
 	TMap<FName, FLinearColor> Colors;
 
 	FCollectionMood() 
@@ -105,7 +82,6 @@ class UMoodBlenderComponent final : public UActorComponent
 {
 	GENERATED_UCLASS_BODY()
 
-public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0))
 	int32 ForceTime;
 
