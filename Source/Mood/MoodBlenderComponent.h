@@ -103,13 +103,6 @@ class UMoodBlenderComponent final : public UActorComponent
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 	ULevelSequence* MoodSequence;
 
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-	bool bRecaptureSkyEveryFrame = true;
-
-	// if value > 0.0f, use it to trigger recapture after initializing the game
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-	float FirstRecaptureDelay = 0.0f;
-
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
 	bool bBlending;
 
@@ -141,11 +134,6 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = Mood)
 	USceneComponent* GetComponentFromSequence(const TSubclassOf<USceneComponent> Class);
-
-	void Init();
-
-	UFUNCTION(BlueprintCallable, Category = Mood)
-	void RecaptureSky() const;
 
 	UFUNCTION(BlueprintCallable, Category = Mood)
 	void SetMood(const int32 NewTime, const bool bForce);

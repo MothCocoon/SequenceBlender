@@ -13,8 +13,6 @@
 #include "Sections/MovieSceneFloatSection.h"
 #include "Sections/MovieSceneParameterSection.h"
 
-#include "TimerManager.h"
-
 #include "Tracks/MovieScene3DTransformTrack.h"
 #include "Tracks/MovieSceneColorTrack.h"
 #include "Tracks/MovieSceneFloatTrack.h"
@@ -23,6 +21,13 @@
 
 UMoodBlenderComponent::UMoodBlenderComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
+	, ForceTime(0.0f)
+	, bResetTime(false)
+	, CurrentFrame(0.0f)
+	, MoodSequence(nullptr)
+	, bBlending(false)
+	, CurrentBlendTime(0.0f)
+	, BlendAlpha(0.0f)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
@@ -156,23 +161,6 @@ USceneComponent* UMoodBlenderComponent::GetComponentFromSequence(const TSubclass
 	}
 
 	return nullptr;
-}
-
-void UMoodBlenderComponent::Init()
-{
-	if (FirstRecaptureDelay > 0.0f)
-	{
-		FTimerHandle FirstRecaptureTimer;
-		GetOwner()->GetWorldTimerManager().SetTimer(FirstRecaptureTimer, this, &UMoodBlenderComponent::RecaptureSky, FirstRecaptureDelay, false, 0.0f);
-	}
-}
-
-void UMoodBlenderComponent::RecaptureSky() const
-{
-	if (SkyLightComponent.IsValid())
-	{
-		SkyLightComponent.Get()->RecaptureSky();
-	}
 }
 
 void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
@@ -405,11 +393,6 @@ void UMoodBlenderComponent::UpdateMood()
 		{
 			Object.Value.Actor.Get()->MarkComponentsRenderStateDirty();
 		}
-	}
-
-	if (bRecaptureSkyEveryFrame || BlendAlpha == 1.0f)
-	{
-		RecaptureSky();
 	}
 
 	if (BlendAlpha == 1.0f)
