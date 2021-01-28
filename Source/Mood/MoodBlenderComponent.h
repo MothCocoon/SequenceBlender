@@ -8,7 +8,6 @@ class UMovieScene;
 class UMaterialParameterCollection;
 class UMovieSceneMaterialParameterCollectionTrack;
 class UMovieScenePropertyTrack;
-class USkyLightComponent;
 
 /**
 * Cached list of objects and tracks
@@ -98,7 +97,7 @@ class UMoodBlenderComponent final : public UActorComponent
 	FFrameNumber CurrentFrameNumber;
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0.0f))
-	float BlendTime = 1.0f;
+	float BlendTime;
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
 	ULevelSequence* MoodSequence;
@@ -124,16 +123,12 @@ private:
 	TMap<TWeakObjectPtr<UObject>, FObjectMood> NewObjectStates;
 
 	TWeakObjectPtr<UWorld> World;
-	TWeakObjectPtr<USkyLightComponent> SkyLightComponent;
 
 public:
 	virtual void OnRegister() override;
 	void CacheTracks();
 	void CacheObjectTrack(UObject* Object, const FGuid& ObjectGuid);
 	void GetPropertyTracks(const TWeakObjectPtr<UMovieScene>& MovieScene, const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks) const;
-
-	UFUNCTION(BlueprintPure, Category = Mood)
-	USceneComponent* GetComponentFromSequence(const TSubclassOf<USceneComponent> Class);
 
 	UFUNCTION(BlueprintCallable, Category = Mood)
 	void SetMood(const int32 NewTime, const bool bForce);
@@ -149,4 +144,6 @@ private:
 	void UpdateMood();
 	void UpdateCollection(UMaterialParameterCollection* Collection, const FCollectionMood& NewState);
 	void UpdateObject(UObject* Object, const FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack);
+
+	void OnMoodBlended();
 };

@@ -1,7 +1,7 @@
 #include "MoodBlenderComponent.h"
 
 #include "Channels/MovieSceneChannelProxy.h"
-#include "Components/SkyLightComponent.h"
+#include "Engine/LevelStreaming.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "LevelSequence.h"
@@ -23,7 +23,8 @@ UMoodBlenderComponent::UMoodBlenderComponent(const FObjectInitializer& ObjectIni
 	: Super(ObjectInitializer)
 	, ForceTime(0.0f)
 	, bResetTime(false)
-	, CurrentFrame(0.0f)
+	, CurrentFrame(INDEX_NONE)
+	, BlendTime(1.0f)
 	, MoodSequence(nullptr)
 	, bBlending(false)
 	, CurrentBlendTime(0.0f)
@@ -41,6 +42,9 @@ void UMoodBlenderComponent::OnRegister()
 	if (MoodSequence)
 	{
 		MoodMovie = MoodSequence->GetMovieScene();
+
+		// this won't find actors from sublevels if this component is placed in persistent
+		// we call CacheTracks() before starting every blend, so it can work reliably with sublevels
 		CacheTracks();
 
 		if (bResetTime)
@@ -78,9 +82,21 @@ void UMoodBlenderComponent::CacheTracks()
 		const FGuid& ObjectGuid = MoodMovie.Get()->GetPossessable(i).GetGuid();
 		if (ObjectGuid.IsValid())
 		{
+			TArray<UWorld*> WorldsToTest = {GetWorld()};
+			for (const ULevelStreaming* StreamingLevel : GetWorld()->GetStreamingLevels())
+			{
+				if (StreamingLevel->IsLevelVisible())
+				{
+					WorldsToTest.Add(StreamingLevel->GetWorld());
+				}
+			}
+
 			TArray<UObject*, TInlineAllocator<1>> FoundObjects;
-			MoodSequence->LocateBoundObjects(ObjectGuid, GetWorld(), FoundObjects);
-			
+			for (UWorld* TestedWorld : WorldsToTest)
+			{
+				MoodSequence->LocateBoundObjects(ObjectGuid, TestedWorld, FoundObjects);
+			}
+
 			if (FoundObjects.Num() > 0)
 			{
 				for (UObject* Object : FoundObjects)
@@ -101,7 +117,7 @@ void UMoodBlenderComponent::CacheTracks()
 		{
 			TArray<UObject*, TInlineAllocator<1>> FoundObjects;
 			MoodSequence->LocateBoundObjects(ComponentGuid, BoundActor, FoundObjects);
-			
+
 			if (FoundObjects.Num() > 0)
 			{
 				for (UObject* Object : FoundObjects)
@@ -111,12 +127,6 @@ void UMoodBlenderComponent::CacheTracks()
 				break;
 			}
 		}
-	}
-
-	// get direct reference to skylight component, used by RecaptureSky()
-	if (USceneComponent* Component = GetComponentFromSequence(USkyLightComponent::StaticClass()))
-	{
-		SkyLightComponent = Cast<USkyLightComponent>(Component);
 	}
 }
 
@@ -150,26 +160,22 @@ void UMoodBlenderComponent::GetPropertyTracks(const TWeakObjectPtr<UMovieScene>&
 	}
 }
 
-USceneComponent* UMoodBlenderComponent::GetComponentFromSequence(const TSubclassOf<USceneComponent> Class)
-{
-	for (const TPair<TWeakObjectPtr<UObject>, FCachedPropertyTrack>& Object : ObjectTracks)
-	{
-		if (Object.Key->IsA(Class))
-		{
-			return Cast<USceneComponent>(Object.Key);
-		}
-	}
-
-	return nullptr;
-}
-
 void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 {
-	if (bBlending || !MoodMovie.IsValid()) return;
+	if (!MoodMovie.IsValid())
+	{
+		return;
+	}
+
+	if (bBlending)
+	{
+		OnMoodBlended();
+	}
 
 	if (bForce || CurrentFrame != NewTime)
 	{
 		World = GetWorld();
+		CacheTracks(); // refresh lists so we can get actors from visible sublevels
 
 		const FFrameNumber NewFrameNumber = MoodMovie.Get()->GetTickResolution().AsFrameNumber(NewTime);
 		if (MoodMovie.Get()->GetPlaybackRange().Contains(NewFrameNumber))
@@ -397,9 +403,7 @@ void UMoodBlenderComponent::UpdateMood()
 
 	if (BlendAlpha == 1.0f)
 	{
-		CurrentBlendTime = 0.0f;
-		BlendAlpha = 0.0f;
-		bBlending = false;
+		OnMoodBlended();
 		PrimaryComponentTick.SetTickFunctionEnable(false);
 	}
 }
@@ -453,4 +457,11 @@ void UMoodBlenderComponent::UpdateObject(UObject* Object, const FObjectMood& New
 		const FLinearColor CurrentLinearColor = FMath::Lerp(OldState.LinearColors[Pair.Key], Pair.Value, BlendAlpha);
 		*Pair.Key->ContainerPtrToValuePtr<FLinearColor>(Object) = CurrentLinearColor;
 	}
+}
+
+void UMoodBlenderComponent::OnMoodBlended()
+{
+	CurrentBlendTime = 0.0f;
+	BlendAlpha = 0.0f;
+	bBlending = false;
 }
