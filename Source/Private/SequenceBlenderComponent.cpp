@@ -269,7 +269,10 @@ void USequenceBlenderComponent::CacheObject(UObject* Object, const FCachedProper
 
 	for (const TWeakObjectPtr<UMovieScenePropertyTrack>& TrackPtr : Cache.Tracks)
 	{
-		if (!TrackPtr.IsValid()) { continue; }
+		if (!TrackPtr.IsValid())
+		{
+			continue;
+		}
 
 		const UMovieScenePropertyTrack* Track = TrackPtr.Get();
 		if (Track->GetClass() == UMovieScene3DTransformTrack::StaticClass())
