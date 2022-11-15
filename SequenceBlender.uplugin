@@ -1,0 +1,20 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "SequenceBlender",
+	"Description": "tool for easy managment of weather/mood states in the world",
+	"Category": "Gameplay",
+	"CreatedBy": "Krzysztof Justyński",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EnabledByDefault": true,
+	"Modules": [
+		{
+			"Name": "SequenceBlender",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
