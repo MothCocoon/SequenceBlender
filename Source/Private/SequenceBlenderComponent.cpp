@@ -225,7 +225,7 @@ void USequenceBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 	}
 }
 
-void USequenceBlenderComponent::CacheCollection(UMovieSceneMaterialParameterCollectionTrack* Track)
+void USequenceBlenderComponent::CacheCollection(const UMovieSceneMaterialParameterCollectionTrack* Track)
 {
 	UMaterialParameterCollection* MPC = Track->MPC;
 
@@ -279,7 +279,7 @@ void USequenceBlenderComponent::CacheObject(UObject* Object, const FCachedProper
 			const UMovieScene3DTransformSection* Section = Cast<UMovieScene3DTransformSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrameNumber));
 			if (Section)
 			{
-				TArrayView<FMovieSceneFloatChannel*> FloatChannels = Section->GetChannelProxy().GetChannels<FMovieSceneFloatChannel>();
+				TArrayView<FMovieSceneDoubleChannel*> FloatChannels = Section->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>();
 
 				FVector Translation;
 				FloatChannels[0]->Evaluate(CurrentFrameTime, Translation.X);

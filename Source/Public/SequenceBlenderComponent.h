@@ -134,7 +134,7 @@ public:
 	void SetMood(const int32 NewTime, const bool bForce);
 
 private:
-	void CacheCollection(UMovieSceneMaterialParameterCollectionTrack* Track);
+	void CacheCollection(const UMovieSceneMaterialParameterCollectionTrack* Track);
 	void CacheObject(UObject* Object, const FCachedPropertyTrack& Cache);
 
 public:

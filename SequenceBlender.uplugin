@@ -9,6 +9,7 @@
 	"DocsURL": "",
 	"MarketplaceURL": "",
 	"SupportURL": "",
+	"EngineAssociation": "5.0",
 	"EnabledByDefault": true,
 	"Modules": [
 		{
