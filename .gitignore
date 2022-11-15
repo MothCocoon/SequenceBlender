@@ -1,0 +1,9 @@
+/.idea
+/.vs
+/_ReSharper.Caches
+/Build/WindowsNoEditor
+/Intermediate/*
+/Binaries/*
+/Saved
+
+*.sln
