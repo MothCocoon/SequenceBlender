@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "1.0",
 	"FriendlyName": "SequenceBlender",
-	"Description": "tool for easy managment of weather/mood states in the world",
+	"Description": "Tool for easy managment of weather/mood states in the world.",
 	"Category": "Gameplay",
 	"CreatedBy": "Krzysztof Justyński",
 	"DocsURL": "",
