@@ -1,4 +1,4 @@
-#include "MoodBlenderComponent.h"
+#include "SequenceBlenderComponent.h"
 
 #include "Channels/MovieSceneChannelProxy.h"
 #include "Engine/LevelStreaming.h"
@@ -19,7 +19,7 @@
 #include "Tracks/MovieSceneMaterialParameterCollectionTrack.h"
 #include "Tracks/MovieScenePropertyTrack.h"
 
-UMoodBlenderComponent::UMoodBlenderComponent(const FObjectInitializer& ObjectInitializer)
+USequenceBlenderComponent::USequenceBlenderComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, ForceTime(0.0f)
 	, bResetTime(false)
@@ -35,7 +35,7 @@ UMoodBlenderComponent::UMoodBlenderComponent(const FObjectInitializer& ObjectIni
 	PrimaryComponentTick.SetTickFunctionEnable(false);
 }
 
-void UMoodBlenderComponent::OnRegister()
+void USequenceBlenderComponent::OnRegister()
 {
 	Super::OnRegister();
 
@@ -60,7 +60,7 @@ void UMoodBlenderComponent::OnRegister()
 	}
 }
 
-void UMoodBlenderComponent::CacheTracks()
+void USequenceBlenderComponent::CacheTracks()
 {
 	CollectionTracks.Empty();
 	ObjectTracks.Empty();
@@ -130,7 +130,7 @@ void UMoodBlenderComponent::CacheTracks()
 	}
 }
 
-void UMoodBlenderComponent::CacheObjectTrack(UObject* Object, const FGuid& ObjectGuid)
+void USequenceBlenderComponent::CacheObjectTrack(UObject* Object, const FGuid& ObjectGuid)
 {
 	TArray<TWeakObjectPtr<UMovieScenePropertyTrack>> PropertyTracks;
 	GetPropertyTracks(MoodMovie, ObjectGuid, PropertyTracks);
@@ -142,7 +142,7 @@ void UMoodBlenderComponent::CacheObjectTrack(UObject* Object, const FGuid& Objec
 	}
 }
 
-void UMoodBlenderComponent::GetPropertyTracks(const TWeakObjectPtr<UMovieScene>& MovieScene, const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks) const
+void USequenceBlenderComponent::GetPropertyTracks(const TWeakObjectPtr<UMovieScene>& MovieScene, const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks) const
 {
 	for (const FMovieSceneBinding& Binding : MovieScene.Get()->GetBindings())
 	{
@@ -160,7 +160,7 @@ void UMoodBlenderComponent::GetPropertyTracks(const TWeakObjectPtr<UMovieScene>&
 	}
 }
 
-void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
+void USequenceBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 {
 	if (!MoodMovie.IsValid())
 	{
@@ -225,7 +225,7 @@ void UMoodBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 	}
 }
 
-void UMoodBlenderComponent::CacheCollection(UMovieSceneMaterialParameterCollectionTrack* Track)
+void USequenceBlenderComponent::CacheCollection(UMovieSceneMaterialParameterCollectionTrack* Track)
 {
 	UMaterialParameterCollection* MPC = Track->MPC;
 
@@ -262,7 +262,7 @@ void UMoodBlenderComponent::CacheCollection(UMovieSceneMaterialParameterCollecti
 	}
 }
 
-void UMoodBlenderComponent::CacheObject(UObject* Object, const FCachedPropertyTrack& Cache)
+void USequenceBlenderComponent::CacheObject(UObject* Object, const FCachedPropertyTrack& Cache)
 {
 	FObjectMood& OldState = OldObjectStates.FindOrAdd(Object);
 	FObjectMood& NewState = NewObjectStates.FindOrAdd(Object);
@@ -358,13 +358,13 @@ void UMoodBlenderComponent::CacheObject(UObject* Object, const FCachedPropertyTr
 	}
 }
 
-void UMoodBlenderComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void USequenceBlenderComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	UpdateMood();
 }
 
-void UMoodBlenderComponent::UpdateMood()
+void USequenceBlenderComponent::UpdateMood()
 {
 	if (bBlending)
 	{
@@ -408,7 +408,7 @@ void UMoodBlenderComponent::UpdateMood()
 	}
 }
 
-void UMoodBlenderComponent::UpdateCollection(UMaterialParameterCollection* Collection, const FCollectionMood& NewState)
+void USequenceBlenderComponent::UpdateCollection(UMaterialParameterCollection* Collection, const FCollectionMood& NewState)
 {
 	FCollectionMood& OldState = OldCollectionStates.FindOrAdd(Collection);
 
@@ -423,7 +423,7 @@ void UMoodBlenderComponent::UpdateCollection(UMaterialParameterCollection* Colle
 	}
 }
 
-void UMoodBlenderComponent::UpdateObject(UObject* Object, const FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack)
+void USequenceBlenderComponent::UpdateObject(UObject* Object, const FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack)
 {
 	FObjectMood& OldState = OldObjectStates.FindOrAdd(Object);
 
@@ -459,7 +459,7 @@ void UMoodBlenderComponent::UpdateObject(UObject* Object, const FObjectMood& New
 	}
 }
 
-void UMoodBlenderComponent::OnMoodBlended()
+void USequenceBlenderComponent::OnMoodBlended()
 {
 	CurrentBlendTime = 0.0f;
 	BlendAlpha = 0.0f;

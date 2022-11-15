@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MoodBlenderComponent.generated.h"
+#include "SequenceBlenderComponent.generated.h"
 
 class ULevelSequence;
 class UMovieScene;
@@ -77,7 +77,7 @@ struct FCollectionMood
 };
 
 UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent), CollapseCategories, HideCategories = (Activation, Collision, Cooking, Tags))
-class UMoodBlenderComponent final : public UActorComponent
+class USequenceBlenderComponent final : public UActorComponent
 {
 	GENERATED_UCLASS_BODY()
 
