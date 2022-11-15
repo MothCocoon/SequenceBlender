@@ -36,10 +36,10 @@ struct FCachedPropertyTrack
 };
 
 /**
-* Container for mood state of object
+* Container for the blend state of objects
 */
 USTRUCT()
-struct FObjectMood
+struct FObjectBlendState
 {
 	GENERATED_BODY()
 
@@ -51,7 +51,7 @@ struct FObjectMood
 	TMap<FStructProperty*, FLinearColor> Colors;
 	TMap<FStructProperty*, FLinearColor> LinearColors;
 
-	FObjectMood() 
+	FObjectBlendState() 
 	{
 		bValid = false;
 		bNewTransform = false;
@@ -59,10 +59,10 @@ struct FObjectMood
 };
 
 /**
-* Container for mood state of material param collection
+* Container for the blend state of material param collection
 */
 USTRUCT()
-struct FCollectionMood
+struct FShaderBlendState
 {
 	GENERATED_BODY()
 
@@ -70,7 +70,7 @@ struct FCollectionMood
 	TMap<FName, float> Scalars;
 	TMap<FName, FLinearColor> Colors;
 
-	FCollectionMood() 
+	FShaderBlendState() 
 	{
 		bValid = false;
 	}
@@ -81,46 +81,46 @@ class USequenceBlenderComponent final : public UActorComponent
 {
 	GENERATED_UCLASS_BODY()
 
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0))
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend", meta = (ClampMin = 0))
 	int32 ForceTime;
 
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend")
 	bool bResetTime;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend")
 	int32 CurrentFrame;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend")
 	FFrameTime CurrentFrameTime;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend")
 	FFrameNumber CurrentFrameNumber;
 
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood, meta = (ClampMin = 0.0f))
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend", meta = (ClampMin = 0.0f))
 	float BlendTime;
 
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = Mood)
-	ULevelSequence* MoodSequence;
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend")
+	ULevelSequence* Sequence;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend", AdvancedDisplay, Transient)
 	bool bBlending;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend", AdvancedDisplay, Transient)
 	float CurrentBlendTime;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Mood, AdvancedDisplay, Transient)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Sequence Blend", AdvancedDisplay, Transient)
 	float BlendAlpha;
 
 private:
-	TWeakObjectPtr<UMovieScene> MoodMovie;
+	TWeakObjectPtr<UMovieScene> MovieScene;
 
 	TSet<TWeakObjectPtr<UMovieSceneMaterialParameterCollectionTrack>> CollectionTracks;
-	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> OldCollectionStates;
-	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood> NewCollectionStates;
+	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FShaderBlendState> OldCollectionStates;
+	TMap<TWeakObjectPtr<UMaterialParameterCollection>, FShaderBlendState> NewCollectionStates;
 
 	TMap<TWeakObjectPtr<UObject>, FCachedPropertyTrack> ObjectTracks;
-	TMap<TWeakObjectPtr<UObject>, FObjectMood> OldObjectStates;
-	TMap<TWeakObjectPtr<UObject>, FObjectMood> NewObjectStates;
+	TMap<TWeakObjectPtr<UObject>, FObjectBlendState> OldObjectStates;
+	TMap<TWeakObjectPtr<UObject>, FObjectBlendState> NewObjectStates;
 
 	TWeakObjectPtr<UWorld> World;
 
@@ -128,10 +128,10 @@ public:
 	virtual void OnRegister() override;
 	void CacheTracks();
 	void CacheObjectTrack(UObject* Object, const FGuid& ObjectGuid);
-	void GetPropertyTracks(const TWeakObjectPtr<UMovieScene>& MovieScene, const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks) const;
+	void GetPropertyTracks(const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks) const;
 
-	UFUNCTION(BlueprintCallable, Category = Mood)
-	void SetMood(const int32 NewTime, const bool bForce);
+	UFUNCTION(BlueprintCallable, Category = "Sequence Blend")
+	void SetFrame(const int32 NewTime, const bool bForce);
 
 private:
 	void CacheCollection(const UMovieSceneMaterialParameterCollectionTrack* Track);
@@ -141,9 +141,9 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
-	void UpdateMood();
-	void UpdateCollection(UMaterialParameterCollection* Collection, const FCollectionMood& NewState);
-	void UpdateObject(UObject* Object, const FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack);
+	void UpdateBlendState();
+	void UpdateCollection(UMaterialParameterCollection* Collection, const FShaderBlendState& NewState);
+	void UpdateObject(UObject* Object, const FObjectBlendState& NewState, const FCachedPropertyTrack& CachedTrack);
 
-	void OnMoodBlended();
+	void OnBlendCompleted();
 };

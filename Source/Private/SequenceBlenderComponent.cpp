@@ -25,7 +25,7 @@ USequenceBlenderComponent::USequenceBlenderComponent(const FObjectInitializer& O
 	, bResetTime(false)
 	, CurrentFrame(INDEX_NONE)
 	, BlendTime(1.0f)
-	, MoodSequence(nullptr)
+	, Sequence(nullptr)
 	, bBlending(false)
 	, CurrentBlendTime(0.0f)
 	, BlendAlpha(0.0f)
@@ -39,9 +39,9 @@ void USequenceBlenderComponent::OnRegister()
 {
 	Super::OnRegister();
 
-	if (MoodSequence)
+	if (Sequence)
 	{
-		MoodMovie = MoodSequence->GetMovieScene();
+		MovieScene = Sequence->GetMovieScene();
 
 		// this won't find actors from sublevels if this component is placed in persistent
 		// we call CacheTracks() before starting every blend, so it can work reliably with sublevels
@@ -49,12 +49,12 @@ void USequenceBlenderComponent::OnRegister()
 
 		if (bResetTime)
 		{
-			SetMood(0, true);
+			SetFrame(0, true);
 			bResetTime = false;
 		}
 		else if (ForceTime > 0)
 		{
-			SetMood(ForceTime, true);
+			SetFrame(ForceTime, true);
 			ForceTime = 0;
 		}
 	}
@@ -66,7 +66,7 @@ void USequenceBlenderComponent::CacheTracks()
 	ObjectTracks.Empty();
 
 	// get material collection tracks
-	for (UMovieSceneTrack* Track : MoodMovie.Get()->GetMasterTracks())
+	for (UMovieSceneTrack* Track : MovieScene.Get()->GetMasterTracks())
 	{
 		if (UMovieSceneMaterialParameterCollectionTrack* CollectionTrack = Cast<UMovieSceneMaterialParameterCollectionTrack>(Track))
 		{
@@ -77,9 +77,9 @@ void USequenceBlenderComponent::CacheTracks()
 	// get object tracks
 	TArray<UObject*, TInlineAllocator<1>> AllFoundActors;
 	TArray<FGuid> ComponentGuids;
-	for (int i = 0; i < MoodMovie.Get()->GetPossessableCount(); i++)
+	for (int i = 0; i < MovieScene.Get()->GetPossessableCount(); i++)
 	{
-		const FGuid& ObjectGuid = MoodMovie.Get()->GetPossessable(i).GetGuid();
+		const FGuid& ObjectGuid = MovieScene.Get()->GetPossessable(i).GetGuid();
 		if (ObjectGuid.IsValid())
 		{
 			TArray<UWorld*> WorldsToTest = {GetWorld()};
@@ -94,7 +94,7 @@ void USequenceBlenderComponent::CacheTracks()
 			TArray<UObject*, TInlineAllocator<1>> FoundObjects;
 			for (UWorld* TestedWorld : WorldsToTest)
 			{
-				MoodSequence->LocateBoundObjects(ObjectGuid, TestedWorld, FoundObjects);
+				Sequence->LocateBoundObjects(ObjectGuid, TestedWorld, FoundObjects);
 			}
 
 			if (FoundObjects.Num() > 0)
@@ -116,7 +116,7 @@ void USequenceBlenderComponent::CacheTracks()
 		for (UObject* BoundActor : AllFoundActors)
 		{
 			TArray<UObject*, TInlineAllocator<1>> FoundObjects;
-			MoodSequence->LocateBoundObjects(ComponentGuid, BoundActor, FoundObjects);
+			Sequence->LocateBoundObjects(ComponentGuid, BoundActor, FoundObjects);
 
 			if (FoundObjects.Num() > 0)
 			{
@@ -133,7 +133,7 @@ void USequenceBlenderComponent::CacheTracks()
 void USequenceBlenderComponent::CacheObjectTrack(UObject* Object, const FGuid& ObjectGuid)
 {
 	TArray<TWeakObjectPtr<UMovieScenePropertyTrack>> PropertyTracks;
-	GetPropertyTracks(MoodMovie, ObjectGuid, PropertyTracks);
+	GetPropertyTracks(ObjectGuid, PropertyTracks);
 
 	if (PropertyTracks.Num() > 0)
 	{
@@ -142,7 +142,7 @@ void USequenceBlenderComponent::CacheObjectTrack(UObject* Object, const FGuid& O
 	}
 }
 
-void USequenceBlenderComponent::GetPropertyTracks(const TWeakObjectPtr<UMovieScene>& MovieScene, const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks) const
+void USequenceBlenderComponent::GetPropertyTracks(const FGuid& ObjectGuid, TArray<TWeakObjectPtr<UMovieScenePropertyTrack>>& OutTracks) const
 {
 	for (const FMovieSceneBinding& Binding : MovieScene.Get()->GetBindings())
 	{
@@ -160,16 +160,16 @@ void USequenceBlenderComponent::GetPropertyTracks(const TWeakObjectPtr<UMovieSce
 	}
 }
 
-void USequenceBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
+void USequenceBlenderComponent::SetFrame(const int32 NewTime, const bool bForce)
 {
-	if (!MoodMovie.IsValid())
+	if (!MovieScene.IsValid())
 	{
 		return;
 	}
 
 	if (bBlending)
 	{
-		OnMoodBlended();
+		OnBlendCompleted();
 	}
 
 	if (bForce || CurrentFrame != NewTime)
@@ -177,8 +177,8 @@ void USequenceBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 		World = GetWorld();
 		CacheTracks(); // refresh lists so we can get actors from visible sublevels
 
-		const FFrameNumber NewFrameNumber = MoodMovie.Get()->GetTickResolution().AsFrameNumber(NewTime);
-		if (MoodMovie.Get()->GetPlaybackRange().Contains(NewFrameNumber))
+		const FFrameNumber NewFrameNumber = MovieScene.Get()->GetTickResolution().AsFrameNumber(NewTime);
+		if (MovieScene.Get()->GetPlaybackRange().Contains(NewFrameNumber))
 		{
 			CurrentFrame = NewTime;
 			CurrentFrameNumber = NewFrameNumber;
@@ -212,7 +212,7 @@ void USequenceBlenderComponent::SetMood(const int32 NewTime, const bool bForce)
 				if (bForce)
 				{
 					BlendAlpha = 1.0f;
-					UpdateMood();
+					UpdateBlendState();
 				}
 				else if (World.Get()->WorldType == EWorldType::Game || World.Get()->WorldType == EWorldType::PIE)
 				{
@@ -229,8 +229,8 @@ void USequenceBlenderComponent::CacheCollection(const UMovieSceneMaterialParamet
 {
 	UMaterialParameterCollection* MPC = Track->MPC;
 
-	FCollectionMood& OldState = OldCollectionStates.FindOrAdd(MPC);
-	FCollectionMood& NewState = NewCollectionStates.FindOrAdd(MPC);
+	FShaderBlendState& OldState = OldCollectionStates.FindOrAdd(MPC);
+	FShaderBlendState& NewState = NewCollectionStates.FindOrAdd(MPC);
 
 	const UMovieSceneParameterSection* Section = Cast<UMovieSceneParameterSection>(MovieSceneHelpers::FindSectionAtTime(Track->GetAllSections(), CurrentFrameNumber));
 	if (Section)
@@ -264,8 +264,8 @@ void USequenceBlenderComponent::CacheCollection(const UMovieSceneMaterialParamet
 
 void USequenceBlenderComponent::CacheObject(UObject* Object, const FCachedPropertyTrack& Cache)
 {
-	FObjectMood& OldState = OldObjectStates.FindOrAdd(Object);
-	FObjectMood& NewState = NewObjectStates.FindOrAdd(Object);
+	FObjectBlendState& OldState = OldObjectStates.FindOrAdd(Object);
+	FObjectBlendState& NewState = NewObjectStates.FindOrAdd(Object);
 
 	for (const TWeakObjectPtr<UMovieScenePropertyTrack>& TrackPtr : Cache.Tracks)
 	{
@@ -361,10 +361,10 @@ void USequenceBlenderComponent::CacheObject(UObject* Object, const FCachedProper
 void USequenceBlenderComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	UpdateMood();
+	UpdateBlendState();
 }
 
-void USequenceBlenderComponent::UpdateMood()
+void USequenceBlenderComponent::UpdateBlendState()
 {
 	if (bBlending)
 	{
@@ -373,14 +373,14 @@ void USequenceBlenderComponent::UpdateMood()
 	}
 
 	// update properties
-	for (TPair<TWeakObjectPtr<UMaterialParameterCollection>, FCollectionMood>& Pair : NewCollectionStates)
+	for (TPair<TWeakObjectPtr<UMaterialParameterCollection>, FShaderBlendState>& Pair : NewCollectionStates)
 	{
 		if (Pair.Key.IsValid() && Pair.Value.bValid)
 		{
 			UpdateCollection(Pair.Key.Get(), Pair.Value);
 		}
 	}
-	for (TPair<TWeakObjectPtr<UObject>, FObjectMood>& Pair : NewObjectStates)
+	for (TPair<TWeakObjectPtr<UObject>, FObjectBlendState>& Pair : NewObjectStates)
 	{
 		if (Pair.Key.IsValid() && Pair.Value.bValid)
 		{
@@ -403,14 +403,14 @@ void USequenceBlenderComponent::UpdateMood()
 
 	if (BlendAlpha == 1.0f)
 	{
-		OnMoodBlended();
+		OnBlendCompleted();
 		PrimaryComponentTick.SetTickFunctionEnable(false);
 	}
 }
 
-void USequenceBlenderComponent::UpdateCollection(UMaterialParameterCollection* Collection, const FCollectionMood& NewState)
+void USequenceBlenderComponent::UpdateCollection(UMaterialParameterCollection* Collection, const FShaderBlendState& NewState)
 {
-	FCollectionMood& OldState = OldCollectionStates.FindOrAdd(Collection);
+	FShaderBlendState& OldState = OldCollectionStates.FindOrAdd(Collection);
 
 	for (const TPair<FName, float>& Pair : NewState.Scalars)
 	{
@@ -423,9 +423,9 @@ void USequenceBlenderComponent::UpdateCollection(UMaterialParameterCollection* C
 	}
 }
 
-void USequenceBlenderComponent::UpdateObject(UObject* Object, const FObjectMood& NewState, const FCachedPropertyTrack& CachedTrack)
+void USequenceBlenderComponent::UpdateObject(UObject* Object, const FObjectBlendState& NewState, const FCachedPropertyTrack& CachedTrack)
 {
-	FObjectMood& OldState = OldObjectStates.FindOrAdd(Object);
+	FObjectBlendState& OldState = OldObjectStates.FindOrAdd(Object);
 
 	if (NewState.bNewTransform)
 	{
@@ -459,7 +459,7 @@ void USequenceBlenderComponent::UpdateObject(UObject* Object, const FObjectMood&
 	}
 }
 
-void USequenceBlenderComponent::OnMoodBlended()
+void USequenceBlenderComponent::OnBlendCompleted()
 {
 	CurrentBlendTime = 0.0f;
 	BlendAlpha = 0.0f;
