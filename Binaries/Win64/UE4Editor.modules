@@ -1,8 +1,0 @@
-{
-	"BuildId": "14830424",
-	"Modules": 
-	{
-		"Mood": "UE4Editor-Mood.dll",
-		"MoodEditor": "UE4Editor-MoodEditor.dll"
-	}
-}
